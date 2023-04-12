@@ -8,7 +8,10 @@ RUN apk update \
     && apk add --no-cache \
     chromium
 
-WORKDIR /app
+RUN adduser --shell /sbin/nologin --disabled-password runner
+
+WORKDIR /home/runner/app
 COPY . .
 RUN npm install
-CMD ["npm start"]
+USER runner
+CMD ["npm", "start"]

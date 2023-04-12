@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  hooker:
+    image: localhost/hookingtest
+    environment:
+      - COOKIES=[]
+    restart: unless-stopped
