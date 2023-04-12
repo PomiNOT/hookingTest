@@ -23,8 +23,8 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
     static getInstance(): Words {
         if(!this._instance) {
             this._instance = new Words()
-            this._instance.loadWords()
         }
+        this._instance.loadWords()
         return this._instance
     }
     
