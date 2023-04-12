@@ -10,6 +10,8 @@ RUN apk update \
 
 RUN adduser --shell /sbin/nologin --disabled-password runner
 
+EXPOSE 8080
+
 WORKDIR /home/runner/app
 COPY . .
 RUN npm install

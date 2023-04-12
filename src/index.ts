@@ -1,6 +1,7 @@
 import puppeteer, { Browser } from 'puppeteer-core'
 import Game from './wordle'
 import Queue from './queue'
+import http from 'http'
 
 type MessageType = 'new_message' | 'typing'
 
@@ -57,7 +58,7 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
                 const game = new Game()
                 games.set(uid, game)
                 return { uid, answer: '[Game] Created a new game', browser: input.browser }
-            } else if (message.startsWith('/guess')) {
+            } else if (message.startsWith('/g')) {
                 const guess = message.split(' ')[1]
                 if (games.has(uid)) {
                     const game = games.get(uid)
@@ -166,3 +167,10 @@ async function run() {
 }
 
 run()
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200)
+    res.end(`The time is: ${Date.now()}`)
+})
+
+server.listen(8080)
