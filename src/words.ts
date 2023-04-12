@@ -23,12 +23,12 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
     static getInstance(): Words {
         if(!this._instance) {
             this._instance = new Words()
+            this._instance.loadWords()
         }
-        this._instance.loadWords()
         return this._instance
     }
     
-    loadWords() {
+    public loadWords() {
         if (this._loaded) this.emit('done')
         let loadedCount = 0
 
@@ -55,11 +55,11 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
         rlAnswers.on('close', onDone)
     }
 
-    exists(word: string): boolean {
+    public exists(word: string): boolean {
         return this.words[word] ?? false
     }
 
-    getRandom(): string {
+    public getRandom(): string {
         return this.answers[Math.floor(Math.random() * this.answers.length)]
     }
 }

@@ -6,11 +6,14 @@ interface CheckResult {
     message: string
 }
 
+type VoidFunc = () => void
+
 export default class Game extends EventEmitter {
     private _randomWord: string = ''
     private _tries: number = 15
     private _history: string[] = []
     private _ended: boolean = false
+    private _randomWordFunc: VoidFunc | null = null
     private readonly wordsInstance: Words
 
     get randomWord(): string {
@@ -33,11 +36,20 @@ export default class Game extends EventEmitter {
         super()
 
         this.wordsInstance = Words.getInstance()
-        this.wordsInstance.on('done', this.random.bind(this))
+        if (!this.wordsInstance.loaded) {
+            this._randomWordFunc = this.random.bind(this)
+            this.wordsInstance.on('done', this._randomWordFunc)
+        } else {
+            this.random()
+        }
     }
 
     private random() {
         this._randomWord = this.wordsInstance.getRandom()
+    }
+
+    public dispose() {
+        if (this._randomWordFunc) this.wordsInstance.off('done', this._randomWordFunc)
     }
 
     public check(word: string): CheckResult {

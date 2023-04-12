@@ -55,6 +55,10 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
                 }
                 return { uid, answer, browser: input.browser }
             } else if (message.startsWith('/newwordle')) {
+                if (games.has(uid)) {
+                    games.get(uid)!.dispose()
+                }
+                
                 const game = new Game()
                 games.set(uid, game)
                 return { uid, answer: '[Game] Created a new game', browser: input.browser }
