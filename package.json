@@ -1,0 +1,20 @@
+{
+  "name": "hookingtest",
+  "version": "1.0.0",
+  "description": "A facebook messenger bot",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^19.8.5",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  },
+  "devDependencies": {
+    "typed-emitter": "^2.1.0"
+  }
+}
