@@ -1,5 +1,4 @@
-import puppeteer, { Browser } from 'puppeteer'
-import fs from 'fs/promises'
+import puppeteer, { Browser } from 'puppeteer-core'
 import Game from './wordle'
 import Queue from './queue'
 
@@ -100,31 +99,20 @@ async function run() {
     })
 
     const browser = await puppeteer.launch({
-        headless: process.env.NODE_ENV == 'production'
+        headless: process.env.NODE_ENV == 'production',
+        executablePath: process.env.CHROME_BIN
     })
     const page = await browser.newPage()
 
     try {
-        const json = await fs.readFile('./credentials/cookies.json')
-        const cookies = JSON.parse(json.toString('utf-8'))
+        const json = process.env.COOKIES ?? '[]'
+        const cookies = JSON.parse(json)
         await page.setCookie(...cookies)
     } catch (_) {
-        console.log('Cookies do not exist!')
+        console.error('Failed to parse cookies')
     }
 
     let myUid: string | undefined
-
-    page.on('framenavigated', async (frame) => {
-        try {
-            const url = new URL(frame.url())
-            if (url.hostname == 'm.facebook.com' && url.pathname.startsWith('/messages')) {
-                const cookies = await page.cookies()
-                myUid = cookies.filter(c => c.name == 'c_user')[0].value
-                await fs.writeFile('./credentials/cookies.json', JSON.stringify(cookies, null, 2))
-                console.log('[Cookies] Saved')
-            }
-        } catch (_) { }
-    })
 
     await page.goto('https://m.facebook.com/messages')
 

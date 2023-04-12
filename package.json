@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "puppeteer": "^19.8.5",
+    "puppeteer-core": "^19.8.5",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
   },

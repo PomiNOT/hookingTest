@@ -1,0 +1,5 @@
+You need to specify a path to Chrome via CHROME_BIN environment variable
+Environment variables:
+NODE_ENV
+CHROME_BIN
+COOKIES
