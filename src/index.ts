@@ -82,7 +82,7 @@ async function writeToMessenger({ uid, answer, browser }: ProcessingOutput): Pro
     await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
     await page.type('textarea[name="body"]', answer)
     await page.click('button[name="send"]')
-    await page.waitForNetworkIdle()
+    await page.waitForNetworkIdle({ timeout: 3000 })
     await page.close()
 }
 
