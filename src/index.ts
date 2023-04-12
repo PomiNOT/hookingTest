@@ -104,15 +104,17 @@ async function run() {
     })
     const page = await browser.newPage()
 
+    let myUid: string | null = null
     try {
         const json = process.env.COOKIES ?? '[]'
         const cookies = JSON.parse(json)
+        //@ts-ignore
+        myUid = cookies.filter(o => o.name == 'c_user')[0].value ?? null
         await page.setCookie(...cookies)
     } catch (_) {
         console.error('Failed to parse cookies')
     }
 
-    let myUid: string | undefined
 
     await page.goto('https://m.facebook.com/messages')
 
@@ -148,8 +150,9 @@ async function run() {
             case 'new_message':
                 for (const msg of deltaNewMessages) {
                     const senderUid = msg.messageMetadata.actorFbId
-                    if (msg.body && myUid && senderUid != myUid) {
-                        const data = { message: msg.body, uid: senderUid }
+                    if (msg.body && myUid) {
+                        let uid = senderUid == myUid ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
+                        const data = { message: msg.body, uid }
                         processingQueue.enqueue({ type, data, browser })
                     }
                 }
