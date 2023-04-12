@@ -9,6 +9,7 @@ type MessageEvents = {
 
 export default class Words extends (EventEmitter as new () => TypedEmitter<MessageEvents>) {
     private words: { [k: string]: boolean } = {}
+    private answers: string[] = []
     private _loaded: boolean = false
     private static _instance: Words | undefined
     get loaded(): boolean {
@@ -29,17 +30,29 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
     
     loadWords() {
         if (this._loaded) this.emit('done')
+        let loadedCount = 0
 
-        const stream = fs.createReadStream('./assets/words')
-        const iFace = readline.createInterface({
-            input: stream
-        })
+        const wordsStream = fs.createReadStream('./assets/words')
+        const answersStream = fs.createReadStream('./assets/answers')
+        const rlWords = readline.createInterface({ input: wordsStream })
+        const rlAnswers = readline.createInterface({ input: answersStream })
 
-        iFace.on('line', (word) => this.words[word] = true)
-        iFace.on('close', () => {
-            this._loaded = true
-            this.emit('done')
+        const onDone = () => {
+            loadedCount++
+
+            if (loadedCount == 2) {
+                this._loaded = true
+                this.emit('done')
+            }
+        }
+        
+        rlWords.on('line', (word) => this.words[word] = true)
+        rlWords.on('close', onDone)
+        rlAnswers.on('line', (word) => {
+            this.answers.push(word)
+            if (word.length < 5) console.log(word)
         })
+        rlAnswers.on('close', onDone)
     }
 
     exists(word: string): boolean {
@@ -47,7 +60,6 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
     }
 
     getRandom(): string {
-        const words = Object.keys(this.words)
-        return words[Math.floor(Math.random() * words.length)]
+        return this.answers[Math.floor(Math.random() * this.answers.length)]
     }
 }

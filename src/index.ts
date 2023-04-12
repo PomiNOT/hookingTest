@@ -29,7 +29,7 @@ interface ProcessingOutput {
     browser: Browser
 }
 
-const games = new Map()
+const games = new Map<string, Game>()
 
 async function processMessage(input: ProcessingInput): Promise<ProcessingOutput | null> {
     console.log(input.data)
@@ -37,7 +37,7 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
     switch (input.type) {
         case 'new_message':
             const { message, uid } = (input.data as NewMessageData)
-            if (message.startsWith('/define')) {
+            if (message.startsWith('/define ')) {
                 const word = message.split(' ')[1]
                 let answer = ''
                 if (word) {
@@ -58,12 +58,17 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
                 const game = new Game()
                 games.set(uid, game)
                 return { uid, answer: '[Game] Created a new game', browser: input.browser }
-            } else if (message.startsWith('/g')) {
+            } else if (message.startsWith('/g ')) {
                 const guess = message.split(' ')[1]
                 if (games.has(uid)) {
                     const game = games.get(uid)
-                    const { message } = game.check(guess.toLowerCase())
+                    const { message } = game!.check(guess.toLowerCase())
                     return { uid, answer: message, browser: input.browser }
+                }
+            } else if (message.startsWith('/reveal')) {
+                if (games.has(uid)) {
+                    const game = games.get(uid)
+                    return { uid, answer: `[Game] It was ${game!.randomWord.toUpperCase()}`, browser: input.browser }
                 }
             }
             break
