@@ -1,4 +1,4 @@
-import puppeteer, { Browser } from 'puppeteer-core'
+import puppeteer, { Browser, HTTPRequest } from 'puppeteer-core'
 import Game from './wordle'
 import Queue from './queue'
 import http from 'http'
@@ -58,7 +58,7 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
                 if (games.has(uid)) {
                     games.get(uid)!.dispose()
                 }
-                
+
                 const game = new Game()
                 games.set(uid, game)
                 return { uid, answer: '[Game] Created a new game', browser: input.browser }
@@ -81,13 +81,30 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
     return null
 }
 
+function removeImagesAndCss(request: HTTPRequest) {
+    if (
+        request.resourceType() == 'image' ||
+        request.resourceType() == 'stylesheet' ||
+        request.resourceType() == 'font'
+    ) {
+        request.abort();
+    } else {
+        request.continue();
+    }
+}
+
 async function writeToMessenger({ uid, answer, browser }: ProcessingOutput): Promise<void> {
     const page = await browser.newPage()
+    await page.setRequestInterception(true)
+    page.on('request', removeImagesAndCss)
     await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
     await page.type('textarea[name="body"]', answer)
     await page.click('button[name="send"]')
-    await page.waitForNetworkIdle({ timeout: 3000 })
-    await page.close()
+    try {
+        await page.waitForNetworkIdle({ timeout: 3000 })
+    } finally {
+        await page.close()
+    }
 }
 
 async function run() {
@@ -113,6 +130,8 @@ async function run() {
         executablePath: process.env.CHROME_BIN
     })
     const page = await browser.newPage()
+    page.setRequestInterception(true)
+    page.on('request', removeImagesAndCss)
 
     let myUid: string | null = null
     try {
@@ -183,3 +202,5 @@ const server = http.createServer((req, res) => {
 })
 
 server.listen(8080)
+
+console.log('[Server] Started')

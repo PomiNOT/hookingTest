@@ -1,19 +1,19 @@
-FROM node:18-alpine
+FROM node:18-alpine AS builder
+WORKDIR /src
+COPY . .
+RUN npm install
+RUN npm run build
 
+FROM node:18-alpine
+EXPOSE 8080
 ENV CHROME_BIN="/usr/bin/chromium-browser" \
     NODE_ENV="production"
-
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache \
     chromium
-
-RUN adduser --shell /sbin/nologin --disabled-password runner
-
-EXPOSE 8080
-
 WORKDIR /home/runner/app
-COPY . .
-RUN npm install
+COPY --from=builder /src/dist ./dist
+RUN adduser --shell /sbin/nologin --disabled-password runner
 USER runner
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
