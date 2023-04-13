@@ -5,10 +5,6 @@ const games = new Map<string, Game>()
 
 export default async function define({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
     if (commandName == 'newwordle') {
-        if (games.has(msgData.uid)) {
-            games.get(msgData.uid)?.dispose()
-        }
-
         games.set(msgData.uid, new Game())
         return '[Game] Created a new game'
     } else if (commandName == 'g') {

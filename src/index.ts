@@ -41,7 +41,7 @@ async function run() {
 
     let myUid: string | null = null
     try {
-        const json = process.env.COOKIES ?? '[]'
+        const json = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
         const cookies = JSON.parse(json)
         //@ts-ignore
         myUid = cookies.filter(o => o.name == 'c_user')[0].value ?? null

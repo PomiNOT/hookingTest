@@ -1,14 +1,19 @@
 import Words from './words'
 import EventEmitter from 'events'
+import TypedEmitter from 'typed-emitter'
 
 interface CheckResult {
     ended: boolean,
     message: string
 }
 
+type MessageEvents = {
+    done: () => void
+}
+
 type VoidFunc = () => void
 
-export default class Game extends EventEmitter {
+export default class Game extends (EventEmitter as new () => TypedEmitter<MessageEvents>) {
     private _randomWord: string = ''
     private _tries: number = 15
     private _history: string[] = []
@@ -36,20 +41,22 @@ export default class Game extends EventEmitter {
         super()
 
         this.wordsInstance = Words.getInstance()
-        if (!this.wordsInstance.loaded) {
-            this._randomWordFunc = this.random.bind(this)
-            this.wordsInstance.on('done', this._randomWordFunc)
-        } else {
+        this._randomWordFunc = () => {
             this.random()
+            this.wordsInstance.off('done', this._randomWordFunc!)
+            this._randomWordFunc = null
         }
+        this.wordsInstance.on('done', this._randomWordFunc)
     }
 
-    private random() {
+    public random() {
         this._randomWord = this.wordsInstance.getRandom()
+        this.emit('done')
     }
 
-    public dispose() {
-        if (this._randomWordFunc) this.wordsInstance.off('done', this._randomWordFunc)
+    public setWord(word: string) {
+        if (word.length != 5) throw new Error('Word must have length 5')
+        this._randomWord = word
     }
 
     public check(word: string): CheckResult {
@@ -64,10 +71,18 @@ export default class Game extends EventEmitter {
                 return { ended: this.ended, message: `[Game] Congrats! The word was ${this.randomWord.toUpperCase()}` }
             } else {                
                 let guessResult = ''
+
+                let lettersCount: { [k: string]: number } = {}
+                
+                for (const c of this.randomWord) {
+                    lettersCount[c] = (lettersCount[c] ?? 0) + 1
+                }
+
                 for (let i = 0; i < 5; i++) {
-                    if (this.randomWord.includes(word[i])) {
+                    if (lettersCount[word[i]] > 0) {
                         if (this.randomWord[i] == word[i]) guessResult += ` ${word[i].toUpperCase()} `
                         else guessResult += ` ${word[i]} `
+                        lettersCount[word[i]]--
                     } else {
                         guessResult += ' _ '
                     }

@@ -11,6 +11,7 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
     private words: { [k: string]: boolean } = {}
     private answers: string[] = []
     private _loaded: boolean = false
+    private _loadCalled: boolean = false
     private static _instance: Words | undefined
     get loaded(): boolean {
         return this._loaded
@@ -23,14 +24,17 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
     static getInstance(): Words {
         if(!this._instance) {
             this._instance = new Words()
-            this._instance.loadWords()
         }
+        this._instance.loadWords()
         return this._instance
     }
     
     public loadWords() {
-        if (this._loaded) this.emit('done')
+        if (this._loadCalled) {
+            if (this._loaded) this.emit('done')
+        }
         let loadedCount = 0
+        this._loadCalled = true
 
         const wordsStream = fs.createReadStream('./assets/words')
         const answersStream = fs.createReadStream('./assets/answers')

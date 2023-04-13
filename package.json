@@ -6,7 +6,8 @@
   "source": "src/index.ts",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "build": "webpack build"
+    "build": "webpack build",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",
+    "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.2",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4",
