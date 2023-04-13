@@ -13,7 +13,7 @@ RUN apk update \
     && apk add --no-cache \
     chromium
 WORKDIR /home/runner/app
-COPY --from=builder /src/dist ./dist
+COPY --from=builder /src/dist .
 RUN adduser --shell /sbin/nologin --disabled-password runner
 USER runner
-CMD ["node", "dist/server.js"]
+CMD ["node", "server.js"]
