@@ -5,7 +5,7 @@ RUN npm install
 RUN npm run build
 
 FROM node:18-alpine
-EXPOSE 8080
+ENV PORT=8080
 ENV CHROME_BIN="/usr/bin/chromium-browser" \
     NODE_ENV="production"
 RUN apk update \

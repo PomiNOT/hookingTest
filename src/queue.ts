@@ -44,7 +44,7 @@ export default class Queue<I, R> extends (EventEmitter as new () => TypedEmitter
             if (this.sequential) {
                 try {
                     await result
-                } catch(error) {
+                } catch (error) {
                     if (error instanceof Error) {
                         this.emit('result', {
                             error: true,

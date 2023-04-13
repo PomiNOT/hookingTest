@@ -1,133 +1,27 @@
-import puppeteer, { Browser, HTTPRequest } from 'puppeteer-core'
-import Game from './wordle'
+import puppeteer from 'puppeteer-core'
 import Queue from './queue'
+import Router, { ProcessingInput, ProcessingOutput } from './router'
 import http from 'http'
-import { evaluate, exp } from 'mathjs'
+import { removeImagesAndCss } from './common'
+import calc from './handlers/calc'
+import define from './handlers/define'
+import wordle from './handlers/wordle'
 
-type MessageType = 'new_message' | 'typing'
-
-interface NewMessageData {
-    uid: string
-    message: string
-}
-
-interface TypingData {
-    uid: string,
-    typing: boolean
-}
-
-type MessageData = NewMessageData | TypingData
-
-interface ProcessingInput {
-    type: MessageType,
-    data: MessageData
-    browser: Browser
-}
-
-interface ProcessingOutput {
-    uid: string,
-    answer: string,
-    browser: Browser
-}
-
-const games = new Map<string, Game>()
-const scopes = new Map<string, Object>()
-
-async function processMessage(input: ProcessingInput): Promise<ProcessingOutput | null> {
-    console.log(input.data)
-
-    switch (input.type) {
-        case 'new_message':
-            const { message, uid } = (input.data as NewMessageData)
-            if (message.startsWith('/define ')) {
-                const word = message.split(' ')[1]
-                let answer = ''
-                if (word) {
-                    const response = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word)
-                    const json: any = await response.json()
-                    if (json.message) {
-                        answer = json.message
-                    } else {
-                        for (const meaning of json[0].meanings) {
-                            answer += `${word} (${meaning.partOfSpeech}): ${meaning.definitions[0].definition}\n`
-                        }
-                    }
-                } else {
-                    answer = 'You did not specify a word'
-                }
-                return { uid, answer, browser: input.browser }
-            } else if (message.startsWith('/newwordle')) {
-                if (games.has(uid)) {
-                    games.get(uid)!.dispose()
-                }
-
-                const game = new Game()
-                games.set(uid, game)
-                return { uid, answer: '[Game] Created a new game', browser: input.browser }
-            } else if (message.startsWith('/g ')) {
-                const guess = message.split(' ')[1]
-                if (games.has(uid)) {
-                    const game = games.get(uid)
-                    const { message } = game!.check(guess.toLowerCase())
-                    return { uid, answer: message, browser: input.browser }
-                }
-            } else if (message.startsWith('/reveal')) {
-                if (games.has(uid)) {
-                    const game = games.get(uid)
-                    return { uid, answer: `[Game] It was ${game!.randomWord.toUpperCase()}`, browser: input.browser }
-                }
-            } else if(message.startsWith('/calc ')) {
-                if (!scopes.has(uid)) {
-                    scopes.set(uid, {})
-                }
-                const expr = message.slice(message.indexOf(' ') + 1)
-                const answer = evaluate(expr, scopes.get(uid)).toString()
-                return { uid, answer, browser: input.browser }
-            } else if (message.startsWith('/resetcalc')) {
-                scopes.set(uid, {})
-                return { uid, answer: '[Math] Reset done', browser: input.browser }
-            }
-            break
-    }
-
-    return null
-}
-
-function removeImagesAndCss(request: HTTPRequest) {
-    if (
-        request.resourceType() == 'image' ||
-        request.resourceType() == 'stylesheet' ||
-        request.resourceType() == 'font'
-    ) {
-        request.abort();
-    } else {
-        request.continue();
-    }
-}
-
-async function writeToMessenger({ uid, answer, browser }: ProcessingOutput): Promise<void> {
-    const page = await browser.newPage()
-    await page.setRequestInterception(true)
-    page.on('request', removeImagesAndCss)
-    await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
-    await page.type('textarea[name="body"]', answer)
-    await page.click('button[name="send"]')
-    try {
-        await page.waitForNetworkIdle({ timeout: 3000 })
-    } finally {
-        await page.close()
-    }
-}
 
 async function run() {
+    Router.registerCommandHandler(['define'], define)
+    Router.registerCommandHandler(['calc', 'resetcalc'], calc)
+    Router.registerCommandHandler(['newwordle', 'g', 'reveal'], wordle)
+
     const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput | null>>({
-        processFunc: processMessage,
+        processFunc: Router.processMessage.bind(Router),
         sequential: false
     })
     const outputQueue = new Queue<ProcessingOutput, Promise<void>>({
-        processFunc: writeToMessenger,
+        processFunc: Router.writeToMessenger.bind(Router),
         sequential: true
     })
+
     processingQueue.on('result', (r) => {
         if (r.error) {
             console.error(r.data as Error)
@@ -213,6 +107,6 @@ const server = http.createServer((req, res) => {
     res.end(`The time is: ${Date.now()}`)
 })
 
-server.listen(8080)
+server.listen(process.env.PORT)
 
 console.log('[Server] Started')
