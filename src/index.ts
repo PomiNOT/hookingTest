@@ -2,6 +2,7 @@ import puppeteer, { Browser, HTTPRequest } from 'puppeteer-core'
 import Game from './wordle'
 import Queue from './queue'
 import http from 'http'
+import { evaluate, exp } from 'mathjs'
 
 type MessageType = 'new_message' | 'typing'
 
@@ -30,6 +31,7 @@ interface ProcessingOutput {
 }
 
 const games = new Map<string, Game>()
+const scopes = new Map<string, Object>()
 
 async function processMessage(input: ProcessingInput): Promise<ProcessingOutput | null> {
     console.log(input.data)
@@ -74,6 +76,16 @@ async function processMessage(input: ProcessingInput): Promise<ProcessingOutput 
                     const game = games.get(uid)
                     return { uid, answer: `[Game] It was ${game!.randomWord.toUpperCase()}`, browser: input.browser }
                 }
+            } else if(message.startsWith('/calc ')) {
+                if (!scopes.has(uid)) {
+                    scopes.set(uid, {})
+                }
+                const expr = message.slice(message.indexOf(' ') + 1)
+                const answer = evaluate(expr, scopes.get(uid)).toString()
+                return { uid, answer, browser: input.browser }
+            } else if (message.startsWith('/resetcalc')) {
+                scopes.set(uid, {})
+                return { uid, answer: '[Math] Reset done', browser: input.browser }
             }
             break
     }

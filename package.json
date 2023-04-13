@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "mathjs": "^11.8.0",
     "puppeteer-core": "^19.8.5",
     "typed-emitter": "^2.1.0"
   },

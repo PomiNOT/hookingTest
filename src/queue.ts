@@ -60,6 +60,11 @@ export default class Queue<I, R> extends (EventEmitter as new () => TypedEmitter
                             data: r
                         } as Result<R>)
                     }
+                }).catch((error: Error) => {
+                    this.emit('result', {
+                        error: true,
+                        data: error
+                    } as Result<Error>)
                 })
             }
         }
