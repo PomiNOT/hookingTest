@@ -1,5 +1,5 @@
 import Words from './words'
-import EventEmitter from 'events'
+import { EventEmitter } from 'events'
 import TypedEmitter from 'typed-emitter'
 
 interface CheckResult {
@@ -15,7 +15,7 @@ type VoidFunc = () => void
 
 export default class Game extends (EventEmitter as new () => TypedEmitter<MessageEvents>) {
     private _randomWord: string = ''
-    private _tries: number = 15
+    private _tries: number = 6
     private _history: string[] = []
     private _ended: boolean = false
     private _randomWordFunc: VoidFunc | null = null

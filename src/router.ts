@@ -1,6 +1,7 @@
 import { Browser } from 'puppeteer-core'
 import { removeImagesAndCss } from './common'
 import { parse } from 'discord-command-parser'
+import KVStore from './libs/kv'
 
 type MessageType = 'new_message' | 'typing'
 
@@ -9,7 +10,7 @@ interface NewMessageData {
     message: string
 }
 
-interface TypingData {
+export interface TypingData {
     uid: string
     typing: boolean
 }
@@ -31,7 +32,8 @@ export interface ProcessingOutput {
 export interface HandlerRequest {
     commandName: string
     args: string[]
-    msgData: MessageData
+    msgData: MessageData,
+    kv: KVStore | null
 }
 
 interface Handler {
@@ -41,6 +43,7 @@ interface Handler {
 export default class Router {
     private static commandHandlers: Map<string, Handler> = new Map<string, Handler>()
     private static typingHandler: Handler | null = null
+    private static kvStore: KVStore | null = null
 
     public static registerCommandHandler(commands: string[], handler: Handler): void {
         for (const cmd of commands) {
@@ -50,6 +53,10 @@ export default class Router {
 
     public static registerTypingHandler(handler: Handler): void {
         this.typingHandler = handler
+    }
+
+    public static registerKVStore(store: KVStore): void {
+        this.kvStore = store
     }
 
     public static async processMessage(input: ProcessingInput): Promise<ProcessingOutput | null> {
@@ -69,7 +76,8 @@ export default class Router {
                     const answer = await this.commandHandlers.get(parsed.command)!({
                         commandName: parsed.command,
                         args: parsed.arguments,
-                        msgData: data
+                        msgData: data,
+                        kv: this.kvStore
                     })
 
                     if (!answer) return null
@@ -81,10 +89,13 @@ export default class Router {
                 if (this.typingHandler) {
                     const data = input.data as TypingData
 
+                    console.log(data)
+
                     const answer = await this.typingHandler({
                         commandName: 'typing',
                         args: [],
-                        msgData: data
+                        msgData: data,
+                        kv: this.kvStore
                     })
 
                     if (!answer) return null

@@ -1,17 +1,21 @@
-import puppeteer from 'puppeteer-core'
-import Queue from './queue'
+import { launch } from 'puppeteer-core'
 import Router, { ProcessingInput, ProcessingOutput } from './router'
-import http from 'http'
 import { removeImagesAndCss } from './common'
+import Queue from './libs/queue'
 import calc from './handlers/calc'
 import define from './handlers/define'
 import wordle from './handlers/wordle'
+import respondAtNight from './handlers/respondAtNight'
+import KVStore from './libs/kv'
 
+const kvStore = new KVStore()
 
 async function run() {
     Router.registerCommandHandler(['define'], define)
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
     Router.registerCommandHandler(['newwordle', 'g', 'reveal'], wordle)
+    Router.registerTypingHandler(respondAtNight)
+    Router.registerKVStore(kvStore)
 
     const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput | null>>({
         processFunc: Router.processMessage.bind(Router),
@@ -31,7 +35,7 @@ async function run() {
         outputQueue.enqueue(r.data as ProcessingOutput)
     })
 
-    const browser = await puppeteer.launch({
+    const browser = await launch({
         headless: process.env.NODE_ENV == 'production',
         executablePath: process.env.CHROME_BIN
     })
@@ -102,11 +106,10 @@ async function run() {
 
 run()
 
-const server = http.createServer((req, res) => {
-    res.writeHead(200)
-    res.end(`The time is: ${Date.now()}`)
-})
-
-server.listen(process.env.PORT)
+if (process.env.KV_API_KEY) {
+    kvStore.serve(parseInt(process.env.PORT ?? '8080'), process.env.KV_API_KEY)
+} else {
+    console.log('No KV_API_KEY, KV service will not be started')
+}
 
 console.log('[Server] Started')

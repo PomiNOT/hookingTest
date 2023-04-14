@@ -1,5 +1,5 @@
 import { HandlerRequest } from '../router'
-import Game from '../wordle'
+import Game from '../libs/wordle'
 
 const games = new Map<string, Game>()
 

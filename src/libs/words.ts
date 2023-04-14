@@ -1,7 +1,7 @@
-import readline from 'readline'
-import EventEmitter from 'events'
+import { createInterface } from 'readline'
+import { EventEmitter } from 'events'
 import TypedEmitter from 'typed-emitter'
-import fs from 'fs'
+import { createReadStream } from 'fs'
 
 type MessageEvents = {
     done: () => void
@@ -36,10 +36,10 @@ export default class Words extends (EventEmitter as new () => TypedEmitter<Messa
         let loadedCount = 0
         this._loadCalled = true
 
-        const wordsStream = fs.createReadStream('./assets/words')
-        const answersStream = fs.createReadStream('./assets/answers')
-        const rlWords = readline.createInterface({ input: wordsStream })
-        const rlAnswers = readline.createInterface({ input: answersStream })
+        const wordsStream = createReadStream('./assets/words')
+        const answersStream = createReadStream('./assets/answers')
+        const rlWords = createInterface({ input: wordsStream })
+        const rlAnswers = createInterface({ input: answersStream })
 
         const onDone = () => {
             loadedCount++

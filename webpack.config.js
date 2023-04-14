@@ -7,18 +7,18 @@ module.exports = {
   entry: './src/index.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'server.js',
+    filename: 'server.js'
   },
   resolve: {
-    extensions: ['.ts', '.js'],
+    extensions: ['.ts', '.js']
   },
   module: {
     rules: [
       {
         test: /\.ts$/,
         use: 'ts-loader',
-        exclude: /node_modules/,
-      },
+        exclude: /node_modules/
+      }
     ],
   },
   optimization: {
@@ -27,8 +27,8 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'assets', to: 'assets' }, // copy files from the assets folder to the dist folder
-      ],
-    }),
+        { from: 'assets', to: 'assets' }
+      ]
+    })
   ]
 }

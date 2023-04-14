@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals'
-import Game from '../src/wordle'
+import Game from '../src/libs/wordle'
 
 describe('Wordle game', () => {
     test('Load assets', (done) => {
