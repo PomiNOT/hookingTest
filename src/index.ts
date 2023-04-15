@@ -14,7 +14,7 @@ async function run() {
     Router.registerCommandHandler(['define'], define)
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
     Router.registerCommandHandler(['newwordle', 'g', 'reveal'], wordle)
-    Router.registerTypingHandler(respondAtNight)
+    Router.registerCommandHandler(['*'], respondAtNight)
     Router.registerKVStore(kvStore)
 
     const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput | null>>({
@@ -90,14 +90,17 @@ async function run() {
                 for (const msg of deltaNewMessages) {
                     const senderUid = msg.messageMetadata.actorFbId
                     if (msg.body && myUid) {
-                        let uid = senderUid == myUid ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
-                        const data = { message: msg.body, uid }
+                        const isSelf = senderUid == myUid
+                        let uid = isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
+                        const data = { message: msg.body, uid, isSelf }
                         processingQueue.enqueue({ type, data, browser })
                     }
                 }
                 break
             case 'typing':
-                const data = { uid: obj.sender_fbid.toString(), typing: obj.state == 1 }
+                const uid = obj.sender_fbid.toString()
+                const isSelf = uid == myUid
+                const data = { uid, isSelf, typing: obj.state == 1 }
                 processingQueue.enqueue({ type, data, browser })
                 break
         }

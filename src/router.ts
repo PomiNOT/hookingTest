@@ -7,11 +7,13 @@ type MessageType = 'new_message' | 'typing'
 
 interface NewMessageData {
     uid: string
+    isSelf: boolean
     message: string
 }
 
 export interface TypingData {
     uid: string
+    isSelf: boolean
     typing: boolean
 }
 
@@ -63,6 +65,19 @@ export default class Router {
         switch (input.type) {
             case 'new_message':
                 const data = input.data as NewMessageData
+
+                if (this.commandHandlers.has('*')) {
+                    const answer = await this.commandHandlers.get('*')!({
+                        commandName: '*',
+                        args: [data.message],
+                        msgData: data,
+                        kv: this.kvStore
+                    })
+
+                    if (!answer) return null
+
+                    return { uid: data.uid, answer, browser: input.browser }
+                }
 
                 const parsed = parse({
                     content: data.message,
