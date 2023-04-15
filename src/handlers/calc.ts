@@ -15,7 +15,6 @@ export default async function define({ args, commandName, msgData }: HandlerRequ
         } else {
             return '[Math] Defined function'
         }
-        return answer
     } else if (commandName == 'resetcalc') {
         if (scopes.has(msgData.uid)) {
             scopes.get(msgData.uid)?.clear()

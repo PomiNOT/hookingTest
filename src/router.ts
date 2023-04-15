@@ -66,7 +66,25 @@ export default class Router {
             case 'new_message':
                 const data = input.data as NewMessageData
 
-                if (this.commandHandlers.has('*')) {
+                const parsed = parse({
+                    content: data.message,
+                    author: { bot: false }
+                }, '!')
+
+                if (parsed.success && this.commandHandlers.has(parsed.command)) {
+                    console.log(parsed)
+
+                    const answer = await this.commandHandlers.get(parsed.command)!({
+                        commandName: parsed.command,
+                        args: parsed.arguments,
+                        msgData: data,
+                        kv: this.kvStore
+                    })
+
+                    if (!answer) return null
+
+                    return { uid: data.uid, answer, browser: input.browser }
+                } else if (this.commandHandlers.has('*')) {
                     const answer = await this.commandHandlers.get('*')!({
                         commandName: '*',
                         args: [data.message],
@@ -79,26 +97,6 @@ export default class Router {
                     return { uid: data.uid, answer, browser: input.browser }
                 }
 
-                const parsed = parse({
-                    content: data.message,
-                    author: { bot: false }
-                }, '!')
-
-                if (!parsed.success) return null
-                console.log(parsed)
-
-                if (this.commandHandlers.has(parsed.command)) {
-                    const answer = await this.commandHandlers.get(parsed.command)!({
-                        commandName: parsed.command,
-                        args: parsed.arguments,
-                        msgData: data,
-                        kv: this.kvStore
-                    })
-
-                    if (!answer) return null
-
-                    return { uid: data.uid, answer, browser: input.browser }
-                }
                 break
             case 'typing':
                 if (this.typingHandler) {
