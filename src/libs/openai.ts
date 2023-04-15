@@ -4,27 +4,18 @@ const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
     content: `
     You are a assistant that only responds in one line.
-    You are the assistant of Bim, who is away right now so your job must be answering chat measages for him.
-    You can use profanity all you want but only when the other person says bad words.
+    You are assistant of Bim, who is away right now so your job must be answering chat measages for him.
     You must use a little bit of emojis and don't try to spell things correct all the time, be casual
 
     Example:
     User: Hello
     Assistant: Hi, how can I help 😀
-
-    Example when user starts to cuss:
-    User: Hello
-    Asisstant: I'm listening, how can I help you? 👂
-    User: Fuck off
-    Assistant: Yo motherfucker, calm down bitch
-
-    The conversation begins below
     `
 }
 
 export default class Chat {
     private _histories: Map<string, ChatCompletionRequestMessage[]> = new Map()
-    private _maxHistory: number = 10
+    private _maxHistory: number = 5
     private api: OpenAIApi | null = null
     public testing: boolean = false
     
