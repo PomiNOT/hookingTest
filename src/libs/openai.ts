@@ -3,19 +3,19 @@ import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
     content: `
-    You are a assistant that only responds in one line.
-    You are assistant of Bim, who is away right now so your job must be answering chat measages for him.
-    You must use a little bit of emojis and don't try to spell things correct all the time, be casual
-
-    Example:
-    User: Hello
-    Assistant: Hi, how can I help 😀
+    IMPORTANT:
+    You are a assistant that only responds as concisely as possible.
+    You are assistant of Bim, who is away right now so your job is answering chats for him.
+    Use all lowercase and chat like a teenage, use spelling mistakes and teencodes
+    You must use emojis and be casual, play with the user
     `
 }
 
 export default class Chat {
     private _histories: Map<string, ChatCompletionRequestMessage[]> = new Map()
     private _maxHistory: number = 5
+    private _maxTokens: number = 200
+    private _maxMessageLength: number = 500
     private api: OpenAIApi | null = null
     public testing: boolean = false
     
@@ -46,6 +46,24 @@ export default class Chat {
         return this._histories
     }
 
+    set maxTokens(max: number) {
+        if (max < 0) throw new RangeError('Tokens length cannot be negative')
+        this._maxTokens = max
+    }
+
+    get maxTokens(): number {
+        return this._maxTokens
+    }
+
+    set maxMessageLength(max: number) {
+        if (max < 0) throw new RangeError('Max message length cannot be negative')
+        this._maxMessageLength = max
+    }
+
+    get maxMessageLength(): number {
+        return this._maxMessageLength
+    }
+
     public async getChatResponse(forMessage: string, uid: string): Promise<string | null> {
         if (!this.api) throw new Error('Configuration expected, please use setApiKey function to create it')
         
@@ -60,10 +78,16 @@ export default class Chat {
             }
         }
 
-        messages!.push({ role: 'user', content: forMessage })
+        let content = forMessage.slice(0, this.maxMessageLength)
+        if (forMessage.length > this.maxMessageLength) {
+            content += '...'
+        }
+
+        messages!.push({ role: 'user', content })
 
         const response = await this.api.createChatCompletion({
             model: 'gpt-3.5-turbo',
+            max_tokens: this.maxTokens,
             messages: [
                 SYSTEM_MESSAGE,
                 ...messages!
