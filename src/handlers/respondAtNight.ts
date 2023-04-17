@@ -28,7 +28,8 @@ export default async function respondAtNight({ commandName, args, kv, msgData }:
 
             lasts.set(msgData.uid, Date.now())
 
-            const response = await chat.getChatResponse(args[0], msgData.uid)
+            const prompt = `Answer concisely ${kv?.store.get('profane') == true ? ' and add lots of profanity' : ''}: ${args[0]}`
+            const response = await chat.getChatResponse(prompt, msgData.uid)
             console.log(response)
             return response
         }

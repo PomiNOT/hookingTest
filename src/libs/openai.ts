@@ -78,7 +78,7 @@ export default class Chat {
             }
         }
 
-        let content = 'Answer concisely: ' + forMessage.slice(0, this.maxMessageLength)
+        let content = forMessage.slice(0, this.maxMessageLength)
         if (forMessage.length > this.maxMessageLength) {
             content += '...'
         }
