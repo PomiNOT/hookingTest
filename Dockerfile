@@ -11,7 +11,7 @@ ENV CHROME_BIN="/usr/bin/chromium-browser" \
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache \
-    chromium
+    chromium bash
 WORKDIR /home/runner/app
 COPY --from=builder /src/dist .
 RUN adduser --shell /sbin/nologin --disabled-password runner

@@ -15,6 +15,7 @@
   "dependencies": {
     "discord-command-parser": "^1.5.3",
     "dotenv": "^16.0.3",
+    "is-docker": "^3.0.0",
     "luxon": "^3.3.0",
     "mathjs": "^11.8.0",
     "openai": "^3.2.1",

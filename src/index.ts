@@ -7,6 +7,7 @@ import define from './handlers/define'
 import wordle from './handlers/wordle'
 import respondAtNight from './handlers/respondAtNight'
 import KVStore from './libs/kv'
+import isDocker from 'is-docker'
 
 const kvStore = new KVStore()
 
@@ -37,7 +38,11 @@ async function run() {
 
     const browser = await launch({
         headless: process.env.NODE_ENV == 'production',
-        executablePath: process.env.CHROME_BIN
+        executablePath: process.env.CHROME_BIN,
+        args: isDocker() ? [
+            '--no-sandbox',
+            '--disable-setuid-sandbox'
+        ] : []
     })
     const page = await browser.newPage()
     page.setRequestInterception(true)
