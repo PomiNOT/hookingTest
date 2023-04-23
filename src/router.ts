@@ -5,15 +5,17 @@ import KVStore from './libs/kv'
 
 type MessageType = 'new_message' | 'typing'
 
-interface NewMessageData {
+interface CommonMessageData {
     uid: string
     isSelf: boolean
+    isGroupChat: boolean
+}
+
+interface NewMessageData extends CommonMessageData {
     message: string
 }
 
-export interface TypingData {
-    uid: string
-    isSelf: boolean
+interface TypingData extends CommonMessageData {
     typing: boolean
 }
 

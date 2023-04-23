@@ -18,7 +18,7 @@ if (process.env.OPENAI_API_KEY) {
 export default async function respondAtNight({ commandName, args, kv, msgData }: HandlerRequest): Promise<string | null> {
     const now = DateTime.now().setZone('Asia/Ho_Chi_Minh')
     const isNighttime = now.hour >= 22 || now.hour < 6
-    if (!msgData.isSelf && (isNighttime || kv?.store.get('busy') as boolean == true)) {
+    if (!msgData.isGroupChat && !msgData.isSelf && (isNighttime || kv?.store.get('busy') as boolean == true)) {
         if (commandName == '*') {
             if (lasts.has(msgData.uid)) {
                 const diff = Date.now() - lasts.get(msgData.uid)!

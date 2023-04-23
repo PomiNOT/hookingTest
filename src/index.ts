@@ -7,7 +7,6 @@ import define from './handlers/define'
 import wordle from './handlers/wordle'
 import respondAtNight from './handlers/respondAtNight'
 import KVStore from './libs/kv'
-import isDocker from 'is-docker'
 
 const kvStore = new KVStore()
 
@@ -39,7 +38,7 @@ async function run() {
     const browser = await launch({
         headless: process.env.NODE_ENV == 'production',
         executablePath: process.env.CHROME_BIN,
-        args: isDocker() ? [
+        args: process.env.IS_DOCKER ? [
             '--no-sandbox',
             '--disable-setuid-sandbox'
         ] : []
@@ -96,8 +95,10 @@ async function run() {
                     const senderUid = msg.messageMetadata.actorFbId
                     if (msg.body && myUid) {
                         const isSelf = senderUid == myUid
-                        let uid = isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
-                        const data = { message: msg.body, uid, isSelf }
+                        const groupChatId = msg.messageMetadata.cid.conversationFbid
+                        let uid = !!groupChatId ? groupChatId : isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
+                        
+                        const data = { message: msg.body, uid, isSelf, isGroupChat: !!groupChatId }
                         processingQueue.enqueue({ type, data, browser })
                     }
                 }
@@ -105,7 +106,7 @@ async function run() {
             case 'typing':
                 const uid = obj.sender_fbid.toString()
                 const isSelf = uid == myUid
-                const data = { uid, isSelf, typing: obj.state == 1 }
+                const data = { uid, isSelf, isGroupChat: false, typing: obj.state == 1 }
                 processingQueue.enqueue({ type, data, browser })
                 break
         }
