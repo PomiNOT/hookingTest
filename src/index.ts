@@ -6,6 +6,7 @@ import calc from './handlers/calc'
 import define from './handlers/define'
 import wordle from './handlers/wordle'
 import respondAtNight from './handlers/respondAtNight'
+import callme from './handlers/callme'
 import KVStore from './libs/kv'
 
 const kvStore = new KVStore()
@@ -14,6 +15,7 @@ async function run() {
     Router.registerCommandHandler(['define'], define)
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
     Router.registerCommandHandler(['newwordle', 'g', 'reveal'], wordle)
+    Router.registerCommandHandler(['callme'], callme)
     Router.registerCommandHandler(['*'], respondAtNight)
     Router.registerKVStore(kvStore)
 
@@ -35,13 +37,22 @@ async function run() {
         outputQueue.enqueue(r.data as ProcessingOutput)
     })
 
+    const dockerArgs = process.env.IS_DOCKER ? [
+        '--no-sandbox',
+        '--disable-setuid-sandbox'
+    ] : []
+
     const browser = await launch({
         headless: process.env.NODE_ENV == 'production',
         executablePath: process.env.CHROME_BIN,
-        args: process.env.IS_DOCKER ? [
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ] : []
+        ignoreHTTPSErrors: true,
+        args: [
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            '--disable-web-security',
+            ...dockerArgs
+        ],
+        ignoreDefaultArgs: ['--mute-audio']
     })
     const page = await browser.newPage()
     page.setRequestInterception(true)
@@ -49,11 +60,13 @@ async function run() {
 
     let myUid: string | null = null
     try {
-        const json = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
-        const cookies = JSON.parse(json)
+        const fbJson = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
+        const messengerJson = Buffer.from(process.env.MESSENGER_COOKIES ?? '', 'base64').toString('utf-8')
+        const fbCookies = JSON.parse(fbJson)
+        const messengerCookies = JSON.parse(messengerJson)
         //@ts-ignore
-        myUid = cookies.filter(o => o.name == 'c_user')[0].value ?? null
-        await page.setCookie(...cookies)
+        myUid = fbCookies.filter(o => o.name == 'c_user')[0].value ?? null
+        await page.setCookie(...fbCookies.concat(messengerCookies))
     } catch (_) {
         console.error('Failed to parse cookies')
     }
@@ -97,7 +110,7 @@ async function run() {
                         const isSelf = senderUid == myUid
                         const groupChatId = msg.messageMetadata.cid.conversationFbid
                         let uid = !!groupChatId ? groupChatId : isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
-                        
+
                         const data = { message: msg.body, uid, isSelf, isGroupChat: !!groupChatId }
                         processingQueue.enqueue({ type, data, browser })
                     }

@@ -37,7 +37,8 @@ export interface HandlerRequest {
     commandName: string
     args: string[]
     msgData: MessageData,
-    kv: KVStore | null
+    kv: KVStore | null,
+    browser: Browser
 }
 
 interface Handler {
@@ -80,7 +81,8 @@ export default class Router {
                         commandName: parsed.command,
                         args: parsed.arguments,
                         msgData: data,
-                        kv: this.kvStore
+                        kv: this.kvStore,
+                        browser: input.browser
                     })
 
                     if (!answer) return null
@@ -91,7 +93,8 @@ export default class Router {
                         commandName: '*',
                         args: [data.message],
                         msgData: data,
-                        kv: this.kvStore
+                        kv: this.kvStore,
+                        browser: input.browser
                     })
 
                     if (!answer) return null
@@ -110,7 +113,8 @@ export default class Router {
                         commandName: 'typing',
                         args: [],
                         msgData: data,
-                        kv: this.kvStore
+                        kv: this.kvStore,
+                        browser: input.browser
                     })
 
                     if (!answer) return null
