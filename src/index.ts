@@ -14,7 +14,7 @@ const kvStore = new KVStore()
 async function run() {
     Router.registerCommandHandler(['define'], define)
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
-    Router.registerCommandHandler(['newwordle', 'g', 'reveal'], wordle)
+    Router.registerCommandHandler(['newwordle', 'g', 'reveal', 'tries'], wordle)
     Router.registerCommandHandler(['callme'], callme)
     Router.registerCommandHandler(['*'], respondAtNight)
     Router.registerKVStore(kvStore)
@@ -39,7 +39,9 @@ async function run() {
 
     const dockerArgs = process.env.IS_DOCKER ? [
         '--no-sandbox',
-        '--disable-setuid-sandbox'
+        '--disable-setuid-sandbox',
+        '--no-zygote',
+        '--single-process'
     ] : []
 
     const browser = await launch({
@@ -49,7 +51,6 @@ async function run() {
         args: [
             '--use-fake-device-for-media-stream',
             '--use-fake-ui-for-media-stream',
-            '--disable-web-security',
             ...dockerArgs
         ],
         ignoreDefaultArgs: ['--mute-audio']

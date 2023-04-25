@@ -3,7 +3,7 @@ import Game from '../libs/wordle'
 
 const games = new Map<string, Game>()
 
-export default async function define({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
+export default async function wordle({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
     if (commandName == 'newwordle') {
         games.set(msgData.uid, new Game())
         return '[Game] Created a new game'
@@ -19,6 +19,12 @@ export default async function define({ args, commandName, msgData }: HandlerRequ
         if (games.has(msgData.uid)) {
             const game = games.get(msgData.uid)
             return `[Game] It was ${game!.randomWord.toUpperCase()}`
+        }
+    } else if (commandName == 'tries') {
+        if (games.has(msgData.uid)) {
+            const game = games.get(msgData.uid)
+            game!.tries = parseInt(args[0])
+            return `[Game] Change max guess to ${args[0]}`
         }
     }
 

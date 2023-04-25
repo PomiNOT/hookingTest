@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - use-messenger-backend
 jobs:
   test-and-deploy:
     name: Run tests and build image
@@ -38,6 +39,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -45,3 +49,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

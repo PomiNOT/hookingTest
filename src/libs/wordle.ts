@@ -29,6 +29,11 @@ export default class Game extends (EventEmitter as new () => TypedEmitter<Messag
         return this._tries
     }
 
+    set tries(max: number) {
+        if (max < 0) throw new Error('Max tries must be positive')
+        this._tries = max
+    }
+
     get history(): string[] {
         return this._history
     }

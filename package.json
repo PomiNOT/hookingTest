@@ -13,14 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@distube/ytdl-core": "^4.11.9",
     "discord-command-parser": "^1.5.3",
     "dotenv": "^16.0.3",
     "luxon": "^3.3.0",
     "mathjs": "^11.8.0",
     "openai": "^3.2.1",
     "puppeteer-core": "^19.8.5",
-    "typed-emitter": "^2.1.0",
-    "ytdl-core": "^4.11.4"
+    "typed-emitter": "^2.1.0"
   },
   "devDependencies": {
     "@types/luxon": "^3.3.0",

@@ -1,4 +1,4 @@
-import { Browser } from 'puppeteer-core'
+import { Browser, Page } from 'puppeteer-core'
 import { removeImagesAndCss } from './common'
 import { parse } from 'discord-command-parser'
 import KVStore from './libs/kv'
@@ -49,6 +49,17 @@ export default class Router {
     private static commandHandlers: Map<string, Handler> = new Map<string, Handler>()
     private static typingHandler: Handler | null = null
     private static kvStore: KVStore | null = null
+    private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
+    private static _maxPages: number = 5
+
+    static get maxPages(): number {
+        return this._maxPages
+    }
+
+    static set maxPages(max: number) {
+        if (max < 1) throw new Error('Number of pages must be at least 1')
+        this._maxPages = max
+    }
 
     public static registerCommandHandler(commands: string[], handler: Handler): void {
         for (const cmd of commands) {
@@ -128,16 +139,32 @@ export default class Router {
     }
 
     public static async writeToMessenger({ browser, uid, answer }: ProcessingOutput): Promise<void> {
-        const page = await browser.newPage()
-        await page.setRequestInterception(true)
-        page.on('request', removeImagesAndCss)
-        await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
+        let page: Page
+
+        if (!this.pages.has(uid)) {
+            if (this.pages.size < this.maxPages) {
+                page = await browser.newPage()
+                await page.setRequestInterception(true)
+                page.on('request', removeImagesAndCss)
+                await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
+            } else {
+                const leastRecentlyUsedPage = Array.from(this.pages.entries())
+                                                .sort(([,a], [,b]) => a.lastUsed - b.lastUsed)[0]
+                page = leastRecentlyUsedPage[1].page
+                this.pages.delete(leastRecentlyUsedPage[0])
+                await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
+            }
+        } else {
+            page = this.pages.get(uid)!.page
+        }
+
+        this.pages.set(uid, {
+            page,
+            lastUsed: Date.now()
+        })
+        
+        await page.bringToFront()
         await page.type('textarea[name="body"]', answer)
         await page.click('button[name="send"]')
-        try {
-            await page.waitForNetworkIdle({ timeout: 3000 })
-        } finally {
-            await page.close()
-        }
     }
 }

@@ -3,7 +3,7 @@ import { Parser, parser } from 'mathjs'
 
 const scopes = new Map<string, Parser>()
 
-export default async function define({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
+export default async function calc({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
     if(commandName == 'calc') {
         if (!scopes.has(msgData.uid)) {
             scopes.set(msgData.uid, parser())

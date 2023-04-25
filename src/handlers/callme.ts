@@ -3,17 +3,25 @@ import { HandlerRequest } from '../router'
 import { removeImagesAndCss } from '../common'
 import { createServer } from 'http'
 import { parse } from 'url'
-import ytdl from 'ytdl-core'
+import ytdl from '@distube/ytdl-core'
 
 const server = createServer(async (req, res) => {
     try {
         const url = parse(req.url!)
         const params = new URLSearchParams(url.query!)
         await new Promise((resolve, reject) => {
-            ytdl(params.get('yt')!, { filter: (format) => format.audioCodec == 'opus' })
+            const stream = ytdl(params.get('yt')!, { filter: (format) => format.audioCodec == 'opus' })
+                .once('readable', () => {
+                    res.writeHead(200, {
+                        'Access-Control-Allow-Origin': '*',
+                        'Content-Type': 'audio/opus'
+                    })
+                })
                 .on('error', (err) => reject(err))
                 .on('end', () => resolve(null))
                 .pipe(res)
+
+            res.on('close', () => stream.destroy())
         })
     } catch(error) {
         console.log(error)
@@ -59,6 +67,8 @@ export default async function callMe({ msgData, args, browser }: HandlerRequest)
                         const audioContext = new AudioContext()
 
                         const source = new Audio(`http://127.0.0.1:3030?yt=${link}`)
+                        source.crossOrigin = 'anonymous'
+                        source.preload = 'none'
                         source.loop = true
 
                         const sourceNode = audioContext.createMediaElementSource(source)
@@ -86,6 +96,7 @@ export default async function callMe({ msgData, args, browser }: HandlerRequest)
     })
 
     await page.goto(url.toString())
+    await page.waitForNetworkIdle()
     await page.click('div[role="button"]')
 
     const cdp = await page.target().createCDPSession()
@@ -93,7 +104,7 @@ export default async function callMe({ msgData, args, browser }: HandlerRequest)
     await cdp.send('Page.enable')
 
     let played = false
-    const cancelCallTimeout = setTimeout(() => page.close(), 10000)
+    const cancelCallTimeout = setTimeout(() => page.close(), 30000)
 
     cdp.on('Network.webSocketFrameReceived', async ({ response }) => {
         const buf = Buffer.from(response.payloadData, 'base64')
