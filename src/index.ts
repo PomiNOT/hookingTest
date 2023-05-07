@@ -1,3 +1,6 @@
+import { config } from 'dotenv'
+config()
+
 import { launch } from 'puppeteer-core'
 import Router, { ProcessingInput, ProcessingOutput } from './router'
 import { removeImagesAndCss } from './common'
@@ -5,7 +8,7 @@ import Queue from './libs/queue'
 import calc from './handlers/calc'
 import define from './handlers/define'
 import wordle from './handlers/wordle'
-import respondAtNight from './handlers/respondAtNight'
+import catchAll from './handlers/catchAll'
 import callme from './handlers/callme'
 import KVStore from './libs/kv'
 
@@ -16,7 +19,7 @@ async function run() {
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
     Router.registerCommandHandler(['newwordle', 'g', 'reveal', 'tries'], wordle)
     Router.registerCommandHandler(['callme'], callme)
-    Router.registerCommandHandler(['*'], respondAtNight)
+    Router.registerCommandHandler(['*'], catchAll)
     Router.registerKVStore(kvStore)
 
     const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput | null>>({
