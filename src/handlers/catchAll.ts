@@ -24,7 +24,7 @@ const db = getFirestore()
 
 let lasts: Map<string, number> = new Map()
 
-const chat = Chat.getInstance()
+const chat = new Chat()
 
 if (process.env.OPENAI_API_KEY) {
     chat.apiKey = process.env.OPENAI_API_KEY

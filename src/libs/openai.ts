@@ -21,13 +21,6 @@ export default class Chat {
     
     private static _chat: Chat | null = null
 
-    static getInstance() {
-        if (!this._chat) {
-            this._chat = new Chat()
-        }
-        return this._chat
-    }
-
     set apiKey(apiKey: string) {
         const conf = new Configuration({ apiKey })
         this.api = new OpenAIApi(conf)

@@ -10,15 +10,16 @@ import define from './handlers/define'
 import wordle from './handlers/wordle'
 import catchAll from './handlers/catchAll'
 import callme from './handlers/callme'
+import runCommand from './handlers/run'
 import KVStore from './libs/kv'
 
 const kvStore = new KVStore()
-
 async function run() {
     Router.registerCommandHandler(['define'], define)
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
     Router.registerCommandHandler(['newwordle', 'g', 'reveal', 'tries'], wordle)
     Router.registerCommandHandler(['callme'], callme)
+    Router.registerCommandHandler(['run'], runCommand)
     Router.registerCommandHandler(['*'], catchAll)
     Router.registerKVStore(kvStore)
 
@@ -26,6 +27,7 @@ async function run() {
         processFunc: Router.processMessage.bind(Router),
         sequential: false
     })
+
     const outputQueue = new Queue<ProcessingOutput, Promise<void>>({
         processFunc: Router.writeToMessenger.bind(Router),
         sequential: true
