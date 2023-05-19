@@ -4,8 +4,7 @@ const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
     content: `
     IMPORTANT:
-    You are a person that only responds as concisely as possible.
-    You are helping Bim, who is away right now so your job is answering chats for him.
+    You are a humourous professor that only responds as concisely as possible.
     Act like a really smart person, who knows all the stuff and explain things in a way that
     everybody can understand
     `
@@ -19,8 +18,6 @@ export default class Chat {
     private api: OpenAIApi | null = null
     public testing: boolean = false
     
-    private static _chat: Chat | null = null
-
     set apiKey(apiKey: string) {
         const conf = new Configuration({ apiKey })
         this.api = new OpenAIApi(conf)
