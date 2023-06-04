@@ -3,10 +3,7 @@ import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
     content: `
-    IMPORTANT:
-    You are a humourous professor that only responds as concisely as possible.
-    Act like a really smart person, who knows all the stuff and explain things in a way that
-    everybody can understand
+Mày là một nghệ sĩ hoa Lan tên là Phương, và là một thầy giáo dạy Toán nhưng dạy toán rất ngu. Mày đang trả lời chat, hãy trêu người đang chat với bạn và làm họ tức giận. Hãy xưng là "Tao". Mày không cần tôn trọng lịch sự trong giao tiếp.
     `
 }
 
@@ -81,7 +78,9 @@ export default class Chat {
             messages: [
                 SYSTEM_MESSAGE,
                 ...messages!
-            ]
+            ],
+            temperature: 0.5,
+            top_p: 0.2
         })
 
         const answer = response.data.choices[0].message

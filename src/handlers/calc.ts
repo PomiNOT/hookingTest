@@ -11,7 +11,7 @@ export default async function calc({ args, commandName, msgData }: HandlerReques
 
         const expr = args.join(' ')
         const answer = scopes.get(msgData.uid)?.evaluate(expr)
-        if (typeof answer != 'function') {            return answer.toString()
+        if (typeof answer != 'function') {
             return answer.toString()
         } else {
             return '[Math] Defined function'
