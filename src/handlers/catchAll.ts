@@ -49,6 +49,9 @@ export default async function catchAll({ args, kv, msgData }: HandlerRequest): P
 
     const busy = kv?.store.get('busy') as boolean
     const startsWithAI = args[0].startsWith('!ai')
+    if (startsWithAI) {
+      args[0] = args[0].slice(3).trimStart()
+    }
 
     if (!msgData.isGroupChat && ((!msgData.isSelf && (isNighttime || busy)) || startsWithAI)) {
       if (lasts.has(msgData.uid)) {
@@ -59,7 +62,7 @@ export default async function catchAll({ args, kv, msgData }: HandlerRequest): P
 
       lasts.set(msgData.uid, Date.now())
 
-      const prompt = `Answer concisely ${kv?.store.get('profane') == true ? ' and add lots of profanity' : ''}: ${args[0]}`
+      const prompt = `${kv?.store.get('profane') == true ? 'Add lots of profanity to your answer: ' : ''}${args[0]}`
       const response = await chat.getChatResponse(prompt, msgData.uid)
       console.log(response)
       return response

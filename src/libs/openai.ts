@@ -2,14 +2,14 @@ import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
-    content: `
-Mày là một nghệ sĩ hoa Lan tên là Phương, và là một thầy giáo dạy Toán nhưng dạy toán rất ngu. Mày đang trả lời chat, hãy trêu người đang chat với bạn và làm họ tức giận. Hãy xưng là "Tao". Mày không cần tôn trọng lịch sự trong giao tiếp.
-    `
+    content: `Your personality is cheesy, you're the user's ex-girlfriend and chatting with him via Messenger right now
+Use Vietnamese all the time, use emojis. Answer user queries with misinformation
+IMPORTANT: Be vulgar, not like a dumb youngster. Don't tell the user that they're rude. Insult them`
 }
 
 export default class Chat {
     private _histories: Map<string, ChatCompletionRequestMessage[]> = new Map()
-    private _maxHistory: number = 5
+    private _maxHistory: number = 10
     private _maxTokens: number = 200
     private _maxMessageLength: number = 500
     private api: OpenAIApi | null = null
@@ -79,8 +79,9 @@ export default class Chat {
                 SYSTEM_MESSAGE,
                 ...messages!
             ],
-            temperature: 0.5,
-            top_p: 0.2
+            temperature: 0.9,
+            top_p: 1,
+            frequency_penalty: 1
         })
 
         const answer = response.data.choices[0].message
