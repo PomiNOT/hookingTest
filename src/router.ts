@@ -36,8 +36,9 @@ export interface ProcessingOutput {
 export interface HandlerRequest {
     commandName: string
     args: string[]
-    msgData: MessageData,
-    kv: KVStore | null,
+    body: string
+    msgData: MessageData
+    kv: KVStore | null
     browser: Browser
 }
 
@@ -50,7 +51,7 @@ export default class Router {
     private static typingHandler: Handler | null = null
     private static kvStore: KVStore | null = null
     private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
-    private static _maxPages: number = 5
+    private static _maxPages: number = 3
 
     static get maxPages(): number {
         return this._maxPages
@@ -91,6 +92,7 @@ export default class Router {
                     const answer = await this.commandHandlers.get(parsed.command)!({
                         commandName: parsed.command,
                         args: parsed.arguments,
+                        body: parsed.reader.body,
                         msgData: data,
                         kv: this.kvStore,
                         browser: input.browser
@@ -103,6 +105,7 @@ export default class Router {
                     const answer = await this.commandHandlers.get('*')!({
                         commandName: '*',
                         args: [data.message],
+                        body: data.message,
                         msgData: data,
                         kv: this.kvStore,
                         browser: input.browser
@@ -124,6 +127,7 @@ export default class Router {
                         commandName: 'typing',
                         args: [],
                         msgData: data,
+                        body: '',
                         kv: this.kvStore,
                         browser: input.browser
                     })

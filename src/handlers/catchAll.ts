@@ -32,19 +32,25 @@ if (process.env.OPENAI_API_KEY) {
     console.log('[OpenAI] You did not specify your OPENAI_API_KEY env variable, requests will fail')
 }
 
-export default async function catchAll({ args, kv, msgData }: HandlerRequest): Promise<string | null> {
-    for (const word of args[0].split(' ')) {
-        const noAccentWorld = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-        if (['ao', 'troll', 'die', 'chet'].includes(noAccentWorld)) {
-            await db.doc('/counters/total').update({
-                count: FieldValue.increment(1)
-            })
-            console.log('Added to count')
-        }
+async function updateCount(body: string) {
+    const words = body.split(' ');
+    const count = words.filter(word => {
+        const noAccentWord = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        return ['ao', 'troll', 'die', 'chet'].includes(noAccentWord)
+    }).length
+
+    if (count > 0) {
+        await db.doc('/counters/total').update({
+            count: FieldValue.increment(count)
+        })
+        console.log(`Added ${count} to count`)
     }
+}
+
+export default async function catchAll({ args, kv, msgData }: HandlerRequest): Promise<string | null> {
+    updateCount(args[0])
 
     const now = DateTime.now().setZone('Asia/Ho_Chi_Minh')
-
     const isNighttime = now.hour >= 22 || now.hour < 6
 
     const busy = kv?.store.get('busy') as boolean

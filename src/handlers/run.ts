@@ -1,10 +1,8 @@
 import { HandlerRequest } from '../router'
 
-export default async function run({ args }: HandlerRequest): Promise<string | null> {
-    const expr = args.join(' ')
-
+export default async function run({ body }: HandlerRequest): Promise<string | null> {
     if (process.env.GLOT_API_KEY) {
-      const response = await fetch('https://glot.io/api/run/java/latest', {
+      const response = await fetch('https://glot.io/api/run/python/latest', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -13,8 +11,8 @@ export default async function run({ args }: HandlerRequest): Promise<string | nu
         body: JSON.stringify({
           files: [
             {
-              name: "Main.java",
-              content: expr
+              name: "main.py",
+              content: body
             }
           ]
         })

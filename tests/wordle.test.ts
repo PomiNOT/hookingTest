@@ -22,6 +22,18 @@ describe('Wordle game', () => {
         }
     })
 
+    test('Generate random words', (done) => {
+        let count = 0
+        for (let i = 0; i < 10; i++) {
+            const game = new Game()
+            game.on('done', () => {
+                expect(game.randomWord.length).toEqual(5)
+                count++
+                if (count == 10) done()
+            })
+        }
+    })
+
     test('Test correct answer', (done) => {
         const game = new Game()
         game.on('done', () => {
