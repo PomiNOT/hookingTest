@@ -51,7 +51,13 @@ export default class Router {
     private static typingHandler: Handler | null = null
     private static kvStore: KVStore | null = null
     private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
-    private static _maxPages: number = 3
+    private static _maxPages: number = 5
+    private static unusedTimeout: number = 60
+    private static garbageCollector: NodeJS.Timer
+
+    static {
+        this.garbageCollector = setInterval(this.closeUnusedPages.bind(this), (this.unusedTimeout / 3) * 1000);
+    }
 
     static get maxPages(): number {
         return this._maxPages
@@ -74,6 +80,16 @@ export default class Router {
 
     public static registerKVStore(store: KVStore): void {
         this.kvStore = store
+    }
+
+    private static async closeUnusedPages() {
+        const tasks = Array.from(this.pages.entries())
+                                        .filter(([, page]) => page.lastUsed + this.unusedTimeout * 1000 <= Date.now())
+                                        .map(([uid, page]) => {
+                                            this.pages.delete(uid);
+                                            return page.page.close();
+                                        })
+        await tasks
     }
 
     public static async processMessage(input: ProcessingInput): Promise<ProcessingOutput | null> {

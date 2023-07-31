@@ -130,6 +130,8 @@ async function run() {
                 break
         }
     })
+
+    setInterval(() => page.reload(), 30 * 60 * 1000)
 }
 
 run()
