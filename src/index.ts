@@ -5,13 +5,16 @@ import { launch } from 'puppeteer-core'
 import Router, { ProcessingInput, ProcessingOutput } from './router'
 import { removeImagesAndCss } from './common'
 import Queue from './libs/queue'
+import KVStore from './libs/kv'
+
 import calc from './handlers/calc'
 import define from './handlers/define'
 import wordle from './handlers/wordle'
-import catchAll from './handlers/catchAll'
+import busyResponder from './handlers/busyResponder'
+import count from './handlers/count'
 import callme from './handlers/callme'
 import runCommand from './handlers/run'
-import KVStore from './libs/kv'
+import cache from './handlers/cache'
 
 const kvStore = new KVStore()
 async function run() {
@@ -20,10 +23,13 @@ async function run() {
     Router.registerCommandHandler(['newwordle', 'g', 'reveal', 'tries'], wordle)
     Router.registerCommandHandler(['callme'], callme)
     Router.registerCommandHandler(['run'], runCommand)
-    Router.registerCommandHandler(['*'], catchAll)
+    Router.registerCommandHandler(['*'], busyResponder)
+    Router.registerCommandHandler(['*'], count)
+    Router.registerCommandHandler(['*'], cache)
+    Router.registerCommandHandler(['what'], cache)
     Router.registerKVStore(kvStore)
 
-    const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput | null>>({
+    const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput[]>>({
         processFunc: Router.processMessage.bind(Router),
         sequential: false
     })
@@ -39,7 +45,9 @@ async function run() {
             return
         }
 
-        outputQueue.enqueue(r.data as ProcessingOutput)
+        for (const result of r.data as ProcessingOutput[]) {
+            outputQueue.enqueue(result as ProcessingOutput)
+        }
     })
 
     const dockerArgs = process.env.IS_DOCKER ? [

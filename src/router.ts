@@ -47,7 +47,7 @@ interface Handler {
 }
 
 export default class Router {
-    private static commandHandlers: Map<string, Handler> = new Map<string, Handler>()
+    private static commandHandlers: Map<string, Handler[]> = new Map<string, Handler[]>()
     private static typingHandler: Handler | null = null
     private static kvStore: KVStore | null = null
     private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
@@ -70,7 +70,11 @@ export default class Router {
 
     public static registerCommandHandler(commands: string[], handler: Handler): void {
         for (const cmd of commands) {
-            this.commandHandlers.set(cmd, handler)
+            if (!this.commandHandlers.has(cmd)) {
+                this.commandHandlers.set(cmd, []);
+            }
+
+            this.commandHandlers.get(cmd)!.push(handler);
         }
     }
 
@@ -92,7 +96,28 @@ export default class Router {
         await tasks
     }
 
-    public static async processMessage(input: ProcessingInput): Promise<ProcessingOutput | null> {
+    private static async getAnswers(handler: string, request: HandlerRequest): Promise<string[]> {
+        const handlers = this.commandHandlers.get(handler)!
+
+        const promises = handlers.map(handler => handler(request))
+
+        const results = await Promise.allSettled(promises)
+        const outputs: string[] = []
+
+        for (const result of results) {
+            if (result.status === 'fulfilled' && result.value !== null) {
+                outputs.push(result.value)
+            } else if (result.status === 'rejected') {
+                console.error(result.reason)
+            }
+        }
+
+        return outputs
+    }
+
+    public static async processMessage(input: ProcessingInput): Promise<ProcessingOutput[]> {
+        let answers: string[] = []
+
         switch (input.type) {
             case 'new_message':
                 const data = input.data as NewMessageData
@@ -105,31 +130,27 @@ export default class Router {
                 if (parsed.success && this.commandHandlers.has(parsed.command)) {
                     console.log(parsed)
 
-                    const answer = await this.commandHandlers.get(parsed.command)!({
+                    const request = {
                         commandName: parsed.command,
                         args: parsed.arguments,
                         body: parsed.reader.body,
                         msgData: data,
                         kv: this.kvStore,
                         browser: input.browser
-                    })
-
-                    if (!answer) return null
-
-                    return { uid: data.uid, answer, browser: input.browser }
+                    }
+                    
+                    answers = await this.getAnswers(parsed.command, request)
                 } else if (this.commandHandlers.has('*')) {
-                    const answer = await this.commandHandlers.get('*')!({
+                    const request = {
                         commandName: '*',
                         args: [data.message],
                         body: data.message,
                         msgData: data,
                         kv: this.kvStore,
                         browser: input.browser
-                    })
+                    }
 
-                    if (!answer) return null
-
-                    return { uid: data.uid, answer, browser: input.browser }
+                    answers = await this.getAnswers('*', request)
                 }
 
                 break
@@ -148,14 +169,18 @@ export default class Router {
                         browser: input.browser
                     })
 
-                    if (!answer) return null
-
-                    return { uid: data.uid, answer, browser: input.browser }
+                    if (answer) answers.push(answer)
                 }
                 break
         }
+        
+        const output: ProcessingOutput[] = answers.map(answer => ({
+            uid: input.data.uid,
+            answer,
+            browser: input.browser
+        }))
 
-        return null
+        return output
     }
 
     public static async writeToMessenger({ browser, uid, answer }: ProcessingOutput): Promise<void> {
