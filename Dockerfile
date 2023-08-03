@@ -1,10 +1,3 @@
-FROM node:18-alpine AS builder
-WORKDIR /src
-COPY package.json package-lock.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
 FROM node:18-alpine
 ENV PORT=8080
 ENV IS_DOCKER=1
@@ -14,8 +7,9 @@ RUN apk update \
     && apk upgrade \
     && apk add --no-cache \
     chromium bash
-WORKDIR /home/runner/app
-COPY --from=builder /src/dist .
 RUN adduser --shell /sbin/nologin --disabled-password runner
+WORKDIR /home/runner/app
+COPY . .
+RUN npm install
 USER runner
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start-prod"]

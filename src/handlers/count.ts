@@ -1,24 +1,6 @@
-import { credential } from 'firebase-admin'
-import { initializeApp, ServiceAccount } from 'firebase-admin/app'
-import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { HandlerRequest, HandlerResponse } from '../router'
-
-try {
-    const cred = Buffer.from(process.env.FIREBASE ?? '', 'base64').toString('utf-8')
-    const serviceAccountJSON = JSON.parse(cred)
-    const serviceAccount: ServiceAccount = {
-        projectId: serviceAccountJSON['project_id'],
-        privateKey: serviceAccountJSON['private_key'],
-        clientEmail: serviceAccountJSON['client_email']
-    }
-
-    initializeApp({credential: credential.cert(serviceAccount) })
-} catch(e) {
-    console.log(e)
-    console.log('[FIREBASE] Service account credentials required!')    
-}
-
-const db = getFirestore()
+import { db } from '../libs/firebase'
+import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function catchAll({ args, msgData }: HandlerRequest): Promise<HandlerResponse> {
     const words = args[0].split(' ');

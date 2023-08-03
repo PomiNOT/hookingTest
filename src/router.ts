@@ -2,8 +2,9 @@ import { Browser, Page } from 'puppeteer-core'
 import { removeImagesAndCss } from './common'
 import { parse } from 'discord-command-parser'
 import KVStore from './libs/kv'
+import { unlink } from 'fs/promises'
 
-type MessageType = 'new_message' | 'typing'
+type MessageType = 'new_message' | 'typing' | 'unsent'
 
 interface CommonMessageData {
     uid: string
@@ -17,6 +18,17 @@ export interface NewMessageData extends CommonMessageData {
     senderUid: string
     attachments: Attachments
 }
+
+export interface TypingData extends CommonMessageData {
+    typing: boolean
+}
+
+export interface UnsentData extends CommonMessageData {
+    messageId: string,
+    senderUid: string
+}
+
+export type MessageData = NewMessageData | TypingData | UnsentData
 
 export interface Attachments {
     length: number
@@ -34,21 +46,23 @@ export interface AttachmentIteratorResult {
     done: boolean
 }
 
-export interface TypingData extends CommonMessageData {
-    typing: boolean
-}
-
-type MessageData = NewMessageData | TypingData
-
 export interface ProcessingInput {
     type: MessageType
     data: MessageData
     browser: Browser
 }
 
+export interface FilePath {
+    path: string,
+    deleteAfterUse: boolean
+}
+
 export interface ProcessingOutput {
     uid: string
-    response: string
+    response: string | {
+        answer: string,
+        filePaths: FilePath[]
+    }
     browser: Browser
 }
 
@@ -63,6 +77,7 @@ export interface HandlerRequest {
 
 export type HandlerResponse = string | {
     answer: string,
+    filePaths: FilePath[],
     recipientUid: string
 } | null
 
@@ -73,10 +88,11 @@ interface Handler {
 export default class Router {
     private static commandHandlers: Map<string, Handler[]> = new Map<string, Handler[]>()
     private static typingHandler: Handler | null = null
+    private static unsentHandler: Handler | null = null
     private static kvStore: KVStore | null = null
     private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
     private static _maxPages: number = 5
-    private static unusedTimeout: number = 60
+    private static unusedTimeout: number = 120
     private static garbageCollector: NodeJS.Timer
 
     static {
@@ -104,6 +120,10 @@ export default class Router {
 
     public static registerTypingHandler(handler: Handler): void {
         this.typingHandler = handler
+    }
+
+    public static registerUnsentHandler(handler: Handler): void {
+        this.unsentHandler = handler
     }
 
     public static registerKVStore(store: KVStore): void {
@@ -182,8 +202,6 @@ export default class Router {
                 if (this.typingHandler) {
                     const data = input.data as TypingData
 
-                    console.log(data)
-
                     const answer = await this.typingHandler({
                         commandName: 'typing',
                         args: [],
@@ -196,6 +214,21 @@ export default class Router {
                     if (answer) answers.push(answer)
                 }
                 break
+            case 'unsent':
+                if (this.unsentHandler) {
+                    const data = input.data as UnsentData
+
+                    const answer = await this.unsentHandler({
+                        commandName: 'unsent',
+                        args: [],
+                        msgData: data,
+                        body: '',
+                        kv: this.kvStore,
+                        browser: input.browser
+                    })
+
+                    if (answer) answers.push(answer)
+                }
         }
         
         //since we have filtered out the nulls in getAnswers, we can use force non-null here
@@ -203,7 +236,10 @@ export default class Router {
             const isString = typeof response === 'string'
             const value = {
                 uid: isString ? input.data.uid : response!.recipientUid,
-                response: isString ? response : response!.answer,
+                response: isString ? response : {
+                    answer: response!.answer,
+                    filePaths: response!.filePaths
+                },
                 browser: input.browser
             }
             return value
@@ -220,13 +256,13 @@ export default class Router {
                 page = await browser.newPage()
                 await page.setRequestInterception(true)
                 page.on('request', removeImagesAndCss)
-                await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
+                await page.goto('https://mbasic.facebook.com/messages/read?fbid=' + uid)
             } else {
                 const leastRecentlyUsedPage = Array.from(this.pages.entries())
                                                 .sort(([,a], [,b]) => a.lastUsed - b.lastUsed)[0]
                 page = leastRecentlyUsedPage[1].page
                 this.pages.delete(leastRecentlyUsedPage[0])
-                await page.goto('https://m.facebook.com/messages/read?tid=' + uid)
+                await page.goto('https://mbasic.facebook.com/messages/read?fbid=' + uid)
             }
         } else {
             page = this.pages.get(uid)!.page
@@ -238,7 +274,36 @@ export default class Router {
         })
         
         await page.bringToFront()
-        await page.type('textarea[name="body"]', response)
-        await page.click('button[name="send"]')
+        if (typeof response === 'string') {
+            await page.type('textarea[name="body"]', response)
+            await page.click('input[name="send"]')
+        } else {
+            await Promise.all([
+                page.click('input[name="send_photo"]'),
+                page.waitForNavigation({ waitUntil: 'networkidle2' })
+            ])
+            
+            await page.type('textarea[name="body"]', response.answer)
+
+            for (const [i, file] of response.filePaths.entries()) {
+                const input = await page.$(`input[name="file${i + 1}"]`)
+                await input?.uploadFile(file.path)
+            }
+
+            await Promise.all([
+                page.click('form input[type="submit"]'),
+                page.waitForNavigation({ waitUntil: 'networkidle2' })
+            ])
+
+            for (const file of response.filePaths) {
+                if (file.deleteAfterUse) {
+                    try {
+                        unlink(file.path)
+                    } catch(e) {
+                        console.log(e)
+                    }
+                }
+            }
+        }
     }
 }

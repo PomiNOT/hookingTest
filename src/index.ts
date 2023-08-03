@@ -1,8 +1,8 @@
 import { config } from 'dotenv'
 config()
 
-import { launch } from 'puppeteer-core'
-import Router, { AttachmentIterator, AttachmentIteratorResult, Attachments, NewMessageData, ProcessingInput, ProcessingOutput, TypingData } from './router'
+import { launch, Page } from 'puppeteer-core'
+import Router, { AttachmentIterator, AttachmentIteratorResult, Attachments, MessageData, NewMessageData, ProcessingInput, ProcessingOutput, TypingData, UnsentData } from './router'
 import { removeImagesAndCss } from './common'
 import Queue from './libs/queue'
 import KVStore from './libs/kv'
@@ -26,7 +26,7 @@ async function run() {
     Router.registerCommandHandler(['*'], busyResponder)
     Router.registerCommandHandler(['*'], count)
     Router.registerCommandHandler(['*'], cache)
-    Router.registerCommandHandler(['what'], cache)
+    Router.registerUnsentHandler(cache)
     Router.registerKVStore(kvStore)
 
     const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput[]>>({
@@ -47,6 +47,12 @@ async function run() {
 
         for (const result of r.data as ProcessingOutput[]) {
             outputQueue.enqueue(result as ProcessingOutput)
+        }
+    })
+
+    outputQueue.on('result', (r) => {
+        if (r.error) {
+            console.error(r.data as Error)
         }
     })
 
@@ -72,14 +78,15 @@ async function run() {
     page.setRequestInterception(true)
     page.on('request', removeImagesAndCss)
 
-    let myUid: string | null = null
+    let myUid: string
     try {
         const fbJson = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
         const messengerJson = Buffer.from(process.env.MESSENGER_COOKIES ?? '', 'base64').toString('utf-8')
         const fbCookies = JSON.parse(fbJson)
         const messengerCookies = JSON.parse(messengerJson)
         //@ts-ignore
-        myUid = fbCookies.filter(o => o.name == 'c_user')[0].value ?? null
+        myUid = fbCookies.filter(o => o.name == 'c_user')[0].value
+        if (typeof myUid !== 'string') throw new Error('Assertion: myUid was not string')
         await page.setCookie(...fbCookies.concat(messengerCookies))
     } catch (_) {
         console.error('Failed to parse cookies')
@@ -100,7 +107,6 @@ async function run() {
             return
         }
 
-        let type = ''
         const rawJSON = str.slice(str.indexOf('{'))
 
         let obj
@@ -110,79 +116,41 @@ async function run() {
             return
         }
 
-        //@ts-ignore
-        let deltaNewMessages = obj?.deltas?.filter(o => o.class == 'NewMessage')
-        if (deltaNewMessages && deltaNewMessages.length > 0) type = 'new_message'
-
+        let type = ''
+        const deltas = obj?.deltas
+        if (deltas && deltas.length > 0) type = 'deltas'
         if (obj.type && obj.type == 'typ') type = 'typing'
-
+        
         switch (type) {
-            case 'new_message':
-                for (const msg of deltaNewMessages) {
-                    const senderUid = msg.messageMetadata.actorFbId
-                    const isSelf = senderUid === myUid
-                    const groupChatId = msg.messageMetadata.cid.conversationFbid
-                    let uid = !!groupChatId ? groupChatId : isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
+            case 'deltas':
+                for (const delta of deltas) {
+                    switch (delta.class) {
+                        case 'NewMessage':
+                            const data = handleNewMessage(delta, myUid, page)
+                            processingQueue.enqueue({ type: 'new_message', data, browser })
+                            break
+                        case 'ClientPayload':
+                            const payload = Buffer.from(delta.payload).toString()
+                            const json = JSON.parse(payload)
+                            const recallData = json.deltas[0].deltaRecallMessageData
+                            if (recallData) {
+                                const senderUid = recallData.senderID
+                                if (senderUid === myUid) break
 
-                    const attachments: Attachments = {
-                        length: msg.attachments?.length ?? 0,
-                        cache: [],
-                        [Symbol.asyncIterator](): AttachmentIterator {
-                            const that = this
+                                const threadId = recallData.threadKey.threadFbId ?? recallData.threadKey.otherUserFbId
 
-                            return {
-                                i: 0,
-                                async next(): Promise<AttachmentIteratorResult> {
-                                    const done = this.i > that.length - 1
-                                    
-                                    if (done) return {
-                                        value: null,
-                                        done
-                                    }
-
-                                    if (that.cache[this.i]) return {
-                                        done,
-                                        value: that.cache[this.i]
-                                    }
-
-                                    const fbid = msg.attachments[this.i].fbid
-
-                                    const value = await page.evaluate(async (uid, mid, fbid) => {
-                                        const query = new URLSearchParams()
-                                        query.set('mid', mid)
-                                        query.set('threadid', uid)
-                                        query.set('fbid', fbid)
-
-                                        const response = await fetch('/messages/attachment_preview/?' + query.toString(), {
-                                            credentials: 'include'
-                                        })
-
-                                        const text = await response.text()
-                                        const reg = /href="(https:\/\/scontent.*?)"/
-                                        const match = reg.exec(text)
-                                        return match ? match[1].replace(/&amp;/g, '&') : null
-                                    }, uid, msg.messageMetadata.messageId, fbid)
-
-                                    that.cache.push(value)
-
-                                    this.i++
-                                    return { done, value }
+                                const data: UnsentData = {
+                                    uid: threadId,
+                                    isGroupChat: threadId !== senderUid,
+                                    isSelf: false,
+                                    messageId: recallData.messageID,
+                                    senderUid
                                 }
+
+                                processingQueue.enqueue({ type: 'unsent', browser, data })
                             }
-                        }
+                            break
                     }
-
-                    const data = {
-                        message: msg.body || '',
-                        messageId: msg.messageMetadata.messageId,
-                        senderUid,
-                        uid,
-                        isSelf,
-                        isGroupChat: !!groupChatId,
-                        attachments
-                    } as NewMessageData
-
-                    processingQueue.enqueue({ type, data, browser })
                 }
                 break
             case 'typing':
@@ -196,6 +164,80 @@ async function run() {
 
     setInterval(() => page.reload(), 30 * 60 * 1000)
 }
+
+function handleNewMessage(delta: any, myUid: string, page: Page): MessageData {
+    const senderUid = delta.messageMetadata.actorFbId
+    const isSelf = senderUid === myUid
+    const groupChatId = delta.messageMetadata.cid.conversationFbid
+    let uid = !!groupChatId ? groupChatId : isSelf ? delta.messageMetadata.threadKey.otherUserFbId : senderUid
+
+    const rawAttachments = delta.attachments ?? []
+    const messageId = delta.messageMetadata.messageId
+    const attachments = makeAttachmentsIterable(rawAttachments, page, uid, messageId)
+
+    const data = {
+        message: delta.body ?? '',
+        messageId, 
+        senderUid,
+        uid,
+        isSelf,
+        isGroupChat: !!groupChatId,
+        attachments
+    } as NewMessageData
+    
+    return data
+}
+
+function makeAttachmentsIterable(attachments: any[], page: Page, uid: string, mid: string): Attachments {
+    return {
+        length: attachments.length,
+        cache: [],
+        [Symbol.asyncIterator](): AttachmentIterator {
+            const that = this
+
+            return {
+                i: 0,
+                async next(): Promise<AttachmentIteratorResult> {
+                    const done = this.i > that.length - 1
+                    
+                    if (done) return {
+                        value: null,
+                        done
+                    }
+
+                    if (that.cache[this.i]) return {
+                        done,
+                        value: that.cache[this.i]
+                    }
+
+                    const fbid = attachments[this.i].fbid
+
+                    const value = await page.evaluate(async (uid, mid, fbid) => {
+                        const query = new URLSearchParams()
+                        query.set('mid', mid)
+                        query.set('threadid', uid)
+                        query.set('fbid', fbid)
+
+                        const response = await fetch('/messages/attachment_preview/?' + query.toString(), {
+                            credentials: 'include'
+                        })
+
+                        const text = await response.text()
+                        const reg = /href="(https:\/\/scontent.*?)"/
+                        const match = reg.exec(text)
+                        return match ? match[1].replace(/&amp;/g, '&') : null
+                    }, uid, mid, fbid)
+
+                    that.cache.push(value)
+
+                    this.i++
+                    return { done, value }
+                }
+            }
+        }
+    }
+}
+
 
 run()
 
