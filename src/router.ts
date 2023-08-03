@@ -11,11 +11,13 @@ interface CommonMessageData {
     isGroupChat: boolean
 }
 
-interface NewMessageData extends CommonMessageData {
+export interface NewMessageData extends CommonMessageData {
     message: string
+    messageId: string
+    senderUid: string
 }
 
-interface TypingData extends CommonMessageData {
+export interface TypingData extends CommonMessageData {
     typing: boolean
 }
 
@@ -29,7 +31,7 @@ export interface ProcessingInput {
 
 export interface ProcessingOutput {
     uid: string
-    answer: string
+    response: string
     browser: Browser
 }
 
@@ -42,8 +44,13 @@ export interface HandlerRequest {
     browser: Browser
 }
 
+export type HandlerResponse = string | {
+    answer: string,
+    recipientUid: string
+} | null
+
 interface Handler {
-    (request: HandlerRequest): Promise<string | null>
+    (request: HandlerRequest): Promise<HandlerResponse>
 }
 
 export default class Router {
@@ -96,13 +103,13 @@ export default class Router {
         await tasks
     }
 
-    private static async getAnswers(handler: string, request: HandlerRequest): Promise<string[]> {
+    private static async getAnswers(handler: string, request: HandlerRequest): Promise<HandlerResponse[]> {
         const handlers = this.commandHandlers.get(handler)!
 
         const promises = handlers.map(handler => handler(request))
 
         const results = await Promise.allSettled(promises)
-        const outputs: string[] = []
+        const outputs: HandlerResponse[] = []
 
         for (const result of results) {
             if (result.status === 'fulfilled' && result.value !== null) {
@@ -116,7 +123,7 @@ export default class Router {
     }
 
     public static async processMessage(input: ProcessingInput): Promise<ProcessingOutput[]> {
-        let answers: string[] = []
+        let answers: HandlerResponse[] = []
 
         switch (input.type) {
             case 'new_message':
@@ -174,16 +181,21 @@ export default class Router {
                 break
         }
         
-        const output: ProcessingOutput[] = answers.map(answer => ({
-            uid: input.data.uid,
-            answer,
-            browser: input.browser
-        }))
+        //since we have filtered out the nulls in getAnswers, we can use force non-null here
+        const output: ProcessingOutput[] = answers.map(response => {
+            const isString = typeof response === 'string'
+            const value = {
+                uid: isString ? input.data.uid : response!.recipientUid,
+                response: isString ? response : response!.answer,
+                browser: input.browser
+            }
+            return value
+        })
 
         return output
     }
 
-    public static async writeToMessenger({ browser, uid, answer }: ProcessingOutput): Promise<void> {
+    public static async writeToMessenger({ browser, uid, response }: ProcessingOutput): Promise<void> {
         let page: Page
 
         if (!this.pages.has(uid)) {
@@ -209,7 +221,7 @@ export default class Router {
         })
         
         await page.bringToFront()
-        await page.type('textarea[name="body"]', answer)
+        await page.type('textarea[name="body"]', response)
         await page.click('button[name="send"]')
     }
 }

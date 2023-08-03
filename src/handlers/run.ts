@@ -1,6 +1,6 @@
-import { HandlerRequest } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router'
 
-export default async function run({ body }: HandlerRequest): Promise<string | null> {
+export default async function run({ body }: HandlerRequest): Promise<HandlerResponse> {
     if (process.env.GLOT_API_KEY) {
       const response = await fetch('https://glot.io/api/run/python/latest', {
         method: 'POST',

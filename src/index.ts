@@ -121,11 +121,18 @@ async function run() {
                 for (const msg of deltaNewMessages) {
                     const senderUid = msg.messageMetadata.actorFbId
                     if (msg.body && myUid) {
-                        const isSelf = senderUid == myUid
+                        const isSelf = senderUid === myUid
                         const groupChatId = msg.messageMetadata.cid.conversationFbid
                         let uid = !!groupChatId ? groupChatId : isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
 
-                        const data = { message: msg.body, uid, isSelf, isGroupChat: !!groupChatId }
+                        const data = {
+                            message: msg.body,
+                            messageId: msg.messageMetadata.messageId,
+                            senderUid,
+                            uid,
+                            isSelf,
+                            isGroupChat: !!groupChatId
+                        }
                         processingQueue.enqueue({ type, data, browser })
                     }
                 }

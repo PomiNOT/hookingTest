@@ -1,7 +1,7 @@
 import { credential } from 'firebase-admin'
 import { initializeApp, ServiceAccount } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
-import { HandlerRequest } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router'
 
 try {
     const cred = Buffer.from(process.env.FIREBASE ?? '', 'base64').toString('utf-8')
@@ -20,7 +20,7 @@ try {
 
 const db = getFirestore()
 
-export default async function catchAll({ args, kv, msgData }: HandlerRequest): Promise<string | null> {
+export default async function catchAll({ args, msgData }: HandlerRequest): Promise<HandlerResponse> {
     const words = args[0].split(' ');
     const count = words.filter(word => {
         const noAccentWord = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -32,6 +32,10 @@ export default async function catchAll({ args, kv, msgData }: HandlerRequest): P
             count: FieldValue.increment(count)
         })
         console.log(`Added ${count} to count`)
+
+        if (!msgData.isGroupChat) {
+            return '+' + count
+        }
     }
 
     return null

@@ -1,9 +1,9 @@
-import { HandlerRequest } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router'
 import { Parser, parser } from 'mathjs'
 
 const scopes = new Map<string, Parser>()
 
-export default async function calc({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
+export default async function calc({ args, commandName, msgData }: HandlerRequest): Promise<HandlerResponse> {
     if(commandName == 'calc') {
         if (!scopes.has(msgData.uid)) {
             scopes.set(msgData.uid, parser())

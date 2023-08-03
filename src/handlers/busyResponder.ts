@@ -1,4 +1,4 @@
-import { HandlerRequest } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router'
 //import { DateTime } from 'luxon'
 //import Chat from '../libs/openai'
 
@@ -15,7 +15,7 @@ if (process.env.OPENAI_API_KEY) {
 */
 
 
-export default async function catchAll({ args, kv, msgData }: HandlerRequest): Promise<string | null> {
+export default async function catchAll({ args, kv, msgData }: HandlerRequest): Promise<HandlerResponse> {
     //const now = DateTime.now().setZone('Asia/Ho_Chi_Minh')
     //const isNighttime = now.hour >= 0 && now.hour < 6
 

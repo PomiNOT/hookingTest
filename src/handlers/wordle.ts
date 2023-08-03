@@ -1,9 +1,9 @@
-import { HandlerRequest } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router'
 import Game from '../libs/wordle'
 
 const games = new Map<string, Game>()
 
-export default async function wordle({ args, commandName, msgData }: HandlerRequest): Promise<string | null> {
+export default async function wordle({ args, commandName, msgData }: HandlerRequest): Promise<HandlerResponse> {
     if (commandName == 'newwordle') {
         games.set(msgData.uid, new Game())
         return '[Game] Created a new game'
