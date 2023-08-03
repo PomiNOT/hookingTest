@@ -2,7 +2,7 @@ import { config } from 'dotenv'
 config()
 
 import { launch } from 'puppeteer-core'
-import Router, { ProcessingInput, ProcessingOutput } from './router'
+import Router, { AttachmentIterator, AttachmentIteratorResult, Attachments, NewMessageData, ProcessingInput, ProcessingOutput, TypingData } from './router'
 import { removeImagesAndCss } from './common'
 import Queue from './libs/queue'
 import KVStore from './libs/kv'
@@ -120,27 +120,75 @@ async function run() {
             case 'new_message':
                 for (const msg of deltaNewMessages) {
                     const senderUid = msg.messageMetadata.actorFbId
-                    if (msg.body && myUid) {
-                        const isSelf = senderUid === myUid
-                        const groupChatId = msg.messageMetadata.cid.conversationFbid
-                        let uid = !!groupChatId ? groupChatId : isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
+                    const isSelf = senderUid === myUid
+                    const groupChatId = msg.messageMetadata.cid.conversationFbid
+                    let uid = !!groupChatId ? groupChatId : isSelf ? msg.messageMetadata.threadKey.otherUserFbId : senderUid
 
-                        const data = {
-                            message: msg.body,
-                            messageId: msg.messageMetadata.messageId,
-                            senderUid,
-                            uid,
-                            isSelf,
-                            isGroupChat: !!groupChatId
+                    const attachments: Attachments = {
+                        length: msg.attachments?.length ?? 0,
+                        cache: [],
+                        [Symbol.asyncIterator](): AttachmentIterator {
+                            const that = this
+
+                            return {
+                                i: 0,
+                                async next(): Promise<AttachmentIteratorResult> {
+                                    const done = this.i > that.length - 1
+                                    
+                                    if (done) return {
+                                        value: null,
+                                        done
+                                    }
+
+                                    if (that.cache[this.i]) return {
+                                        done,
+                                        value: that.cache[this.i]
+                                    }
+
+                                    const fbid = msg.attachments[this.i].fbid
+
+                                    const value = await page.evaluate(async (uid, mid, fbid) => {
+                                        const query = new URLSearchParams()
+                                        query.set('mid', mid)
+                                        query.set('threadid', uid)
+                                        query.set('fbid', fbid)
+
+                                        const response = await fetch('/messages/attachment_preview/?' + query.toString(), {
+                                            credentials: 'include'
+                                        })
+
+                                        const text = await response.text()
+                                        const reg = /href="(https:\/\/scontent.*?)"/
+                                        const match = reg.exec(text)
+                                        return match ? match[1].replace(/&amp;/g, '&') : null
+                                    }, uid, msg.messageMetadata.messageId, fbid)
+
+                                    that.cache.push(value)
+
+                                    this.i++
+                                    return { done, value }
+                                }
+                            }
                         }
-                        processingQueue.enqueue({ type, data, browser })
                     }
+
+                    const data = {
+                        message: msg.body || '',
+                        messageId: msg.messageMetadata.messageId,
+                        senderUid,
+                        uid,
+                        isSelf,
+                        isGroupChat: !!groupChatId,
+                        attachments
+                    } as NewMessageData
+
+                    processingQueue.enqueue({ type, data, browser })
                 }
                 break
             case 'typing':
                 const uid = obj.sender_fbid.toString()
                 const isSelf = uid == myUid
-                const data = { uid, isSelf, isGroupChat: false, typing: obj.state == 1 }
+                const data = { uid, isSelf, isGroupChat: false, typing: obj.state == 1 } as TypingData
                 processingQueue.enqueue({ type, data, browser })
                 break
         }

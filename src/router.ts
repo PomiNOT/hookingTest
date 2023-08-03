@@ -15,6 +15,23 @@ export interface NewMessageData extends CommonMessageData {
     message: string
     messageId: string
     senderUid: string
+    attachments: Attachments
+}
+
+export interface Attachments {
+    length: number
+    cache: (string | null)[]
+    [Symbol.asyncIterator](): AttachmentIterator
+}
+
+export interface AttachmentIterator {
+    i: number,
+    next(): Promise<AttachmentIteratorResult>
+}
+
+export interface AttachmentIteratorResult {
+    value: string | null,
+    done: boolean
 }
 
 export interface TypingData extends CommonMessageData {
