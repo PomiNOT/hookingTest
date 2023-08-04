@@ -211,6 +211,7 @@ function makeAttachmentsIterable(attachments: any[], page: Page, uid: string, mi
                     }
 
                     const fbid = attachments[this.i].fbid
+                    const large_preview = attachments[this.i].mercury.blob_attachment.large_preview.uri ?? null
 
                     const value = await page.evaluate(async (uid, mid, fbid) => {
                         const query = new URLSearchParams()
@@ -226,7 +227,7 @@ function makeAttachmentsIterable(attachments: any[], page: Page, uid: string, mi
                         const reg = /href="(https:\/\/scontent.*?)"/
                         const match = reg.exec(text)
                         return match ? match[1].replace(/&amp;/g, '&') : null
-                    }, uid, mid, fbid)
+                    }, uid, mid, fbid) ?? large_preview
 
                     that.cache.push(value)
 
