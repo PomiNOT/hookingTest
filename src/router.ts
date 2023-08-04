@@ -256,13 +256,13 @@ export default class Router {
                 page = await browser.newPage()
                 await page.setRequestInterception(true)
                 page.on('request', removeImagesAndCss)
-                await page.goto('https://mbasic.facebook.com/messages/read?fbid=' + uid)
+                await page.goto('https://m.facebook.com/messages/read?fbid=' + uid)
             } else {
                 const leastRecentlyUsedPage = Array.from(this.pages.entries())
                                                 .sort(([,a], [,b]) => a.lastUsed - b.lastUsed)[0]
                 page = leastRecentlyUsedPage[1].page
                 this.pages.delete(leastRecentlyUsedPage[0])
-                await page.goto('https://mbasic.facebook.com/messages/read?fbid=' + uid)
+                await page.goto('https://m.facebook.com/messages/read?fbid=' + uid)
             }
         } else {
             page = this.pages.get(uid)!.page
@@ -275,25 +275,21 @@ export default class Router {
         
         await page.bringToFront()
         if (typeof response === 'string') {
+            await page.waitForSelector('textarea[name="body"]')
             await page.type('textarea[name="body"]', response)
-            await page.click('input[name="send"]')
+            await page.click('button[name="send"]', { delay: 1000 })
         } else {
-            await Promise.all([
-                page.click('input[name="send_photo"]'),
-                page.waitForNavigation({ waitUntil: 'networkidle2' })
-            ])
-            
+            await page.waitForSelector('textarea[name="body"]')
             await page.type('textarea[name="body"]', response.answer)
 
-            for (const [i, file] of response.filePaths.entries()) {
-                const input = await page.$(`input[name="file${i + 1}"]`)
+            for (const file of response.filePaths) {
+                await page.waitForSelector('input[name="photo"]')
+                const input = await page.$(`input[name="photo"]`)
                 await input?.uploadFile(file.path)
             }
 
-            await Promise.all([
-                page.click('form input[type="submit"]'),
-                page.waitForNavigation({ waitUntil: 'networkidle2' })
-            ])
+            await page.waitForSelector('button[name="send"]:not([disabled])')
+            await page.click('button[name="send"]', { delay: 2000 })
 
             for (const file of response.filePaths) {
                 if (file.deleteAfterUse) {
