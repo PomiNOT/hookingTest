@@ -1,6 +1,6 @@
+import { Server } from 'http'
 import KVStore from '../src/libs/kv'
 import { describe, expect, test, beforeAll, afterAll, afterEach } from '@jest/globals'
-import { Server } from 'http'
 
 describe('KVStore', () => {
   let server: Server
