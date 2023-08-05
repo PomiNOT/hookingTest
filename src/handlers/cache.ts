@@ -25,12 +25,13 @@ export const store: Map<string, Map<string, InMemoryMessage>> = new Map()
 const MAX_LENGTH = 20
 
 export default async function cache({ args, msgData, commandName }: HandlerRequest): Promise<HandlerResponse> {
-    const { uid, isSelf } = msgData
+    const { uid } = msgData
 
     if (commandName === 'unsent') {
-        console.log(msgData)
         const { isGroupChat, messageId } = msgData as UnsentData
+
         if (isGroupChat) return null
+
         if (store.has(uid) && store.get(uid)!.has(messageId)) {
             const msg = store.get(uid)!.get(messageId)!
             const { cachedPaths, message } = msg
@@ -127,7 +128,7 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
 
                 if (message.locked) continue
                 else {
-                    store.delete(key.value)
+                    entry.delete(key.value)
                     await Promise.all(
                         message.cachedPaths.map(path => path.then(unlink))
                     )
@@ -136,10 +137,11 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
         }
 
         if (!store.has(uid)) {
-            store.set(uid, new Map())
+            store.set(uid, new Map<string, InMemoryMessage>())
         }
 
-        store.get(uid)!.set(messageId, {
+        const map = store.get(uid)!
+        map.set(messageId, {
             ...message,
             cachedPaths,
             locked: false,

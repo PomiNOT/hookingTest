@@ -8,7 +8,7 @@ import Chat from '../libs/openai.js'
 const api = new Chat()
 
 if (!process.env.OPENAI_API_KEY) {
-    console.log('[Bing] OPENAI_API_KEY invalid, this service will not work')
+    console.log('[OpenAI] OPENAI_API_KEY invalid, this service will not work')
 } else {
     api.apiKey = process.env.OPENAI_API_KEY!
     api.maxHistory = 0
@@ -16,19 +16,18 @@ if (!process.env.OPENAI_API_KEY) {
 
 export default async function summarize({ msgData }: HandlerRequest): Promise<HandlerResponse> {
     const roomRef = db.collection('rooms').doc(msgData.uid).collection('messages')
-    const room = await roomRef.limitToLast(20).orderBy('timestamp', 'asc').get()
+    const room = await roomRef.limit(20).orderBy('timestamp', 'desc').get()
 
     if (!room.empty) {
         const messages: Message[] = room.docs.map(snap => snap.data() as Message)
         const textMessages = messages.filter(({ message }) => !!message).map(({ message, timestamp, sender }) => {
             const date = DateTime.fromMillis((timestamp as Timestamp).toMillis())
-            return `At ${date.toFormat('hh:mm:ss')} ${sender} said: ${message}`
+            return `At ${date.toFormat('DD HH:mm:ss')} ${sender} said: ${message}`
         })
 
         if (textMessages.length < 1) return null
 
-        const prompt = `Summarize the topic of this conversation:\n${textMessages.join('\n')}`
-        console.log(prompt)
+        const prompt = `Summarize the key takeaways from this conversation, order of messages from latest to oldest:\n${textMessages.join('\n')}`
         const answer = await api.getChatResponse(prompt, msgData.uid)
         return answer
     }

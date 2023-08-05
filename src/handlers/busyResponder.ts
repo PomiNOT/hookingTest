@@ -15,7 +15,7 @@ if (process.env.OPENAI_API_KEY) {
 */
 
 
-export default async function catchAll({ args, kv, msgData }: HandlerRequest): Promise<HandlerResponse> {
+export default async function busyResponder({ args, kv, msgData }: HandlerRequest): Promise<HandlerResponse> {
     //const now = DateTime.now().setZone('Asia/Ho_Chi_Minh')
     //const isNighttime = now.hour >= 0 && now.hour < 6
 

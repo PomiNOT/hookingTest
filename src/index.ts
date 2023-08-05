@@ -140,7 +140,7 @@ async function run() {
                                 const threadId = recallData.threadKey.threadFbId ?? recallData.threadKey.otherUserFbId
 
                                 const data: UnsentData = {
-                                    uid: threadId,
+                                    uid: String(threadId),
                                     isGroupChat: threadId !== senderUid,
                                     isSelf: false,
                                     messageId: recallData.messageID,

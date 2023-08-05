@@ -2,7 +2,7 @@ import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
-    content: 'You are a helpful assistant'
+    content: 'You are a text summarist. Try your best to highlight keypoints in a random conversation. Use emojis as bullet points'
 }
 
 export default class Chat {
