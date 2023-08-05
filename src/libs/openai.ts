@@ -2,15 +2,13 @@ import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
-    content: `Your personality is cheesy, you're the user's ex-girlfriend and chatting with him via Messenger right now
-Use Vietnamese all the time, use emojis. Answer user queries with misinformation
-IMPORTANT: Be vulgar, not like a dumb youngster. Don't tell the user that they're rude. Insult them`
+    content: 'You are a helpful assistant'
 }
 
 export default class Chat {
     private _histories: Map<string, ChatCompletionRequestMessage[]> = new Map()
     private _maxHistory: number = 10
-    private _maxTokens: number = 200
+    private _maxTokens: number = 700
     private _maxMessageLength: number = 500
     private api: OpenAIApi | null = null
     public testing: boolean = false
@@ -26,7 +24,7 @@ export default class Chat {
 
     set maxHistory(max: number) {
         if (max < 0) throw new RangeError('History length cannot be negative')
-        this.maxHistory = max
+        this._maxHistory = max
     }
 
     get histories(): Map<string, ChatCompletionRequestMessage[]> {
@@ -89,6 +87,6 @@ export default class Chat {
 
         messages!.push(answer)
         
-        return answer.content
+        return answer.content ?? null
     }
 }

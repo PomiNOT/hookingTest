@@ -1,17 +1,18 @@
-import { BingChat } from 'bing-chat'
 import { HandlerRequest, HandlerResponse } from '../router.js'
 import { Message } from './cache.js'
 import { db } from '../libs/firebase.js'
 import { DateTime } from 'luxon'
 import { Timestamp } from 'firebase-admin/firestore'
+import Chat from '../libs/openai.js'
 
-if (!process.env.BING_COOKIE) {
-    console.log('[Bing] BING_COOKIE invalid, this service will not work')
+const api = new Chat()
+
+if (!process.env.OPENAI_API_KEY) {
+    console.log('[Bing] OPENAI_API_KEY invalid, this service will not work')
+} else {
+    api.apiKey = process.env.OPENAI_API_KEY!
+    api.maxHistory = 0
 }
-
-const api = new BingChat({
-    cookie: process.env.BING_COOKIE!
-})
 
 export default async function summarize({ msgData }: HandlerRequest): Promise<HandlerResponse> {
     const roomRef = db.collection('rooms').doc(msgData.uid).collection('messages')
@@ -28,8 +29,8 @@ export default async function summarize({ msgData }: HandlerRequest): Promise<Ha
 
         const prompt = `Summarize the topic of this conversation:\n${textMessages.join('\n')}`
         console.log(prompt)
-        const answer = await api.sendMessage(prompt)
-        return answer.text
+        const answer = await api.getChatResponse(prompt, msgData.uid)
+        return answer
     }
 
     return null
