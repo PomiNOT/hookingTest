@@ -32,7 +32,7 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
         const { isGroupChat, messageId } = msgData as UnsentData
         if (isGroupChat) return null
         if (store.has(uid) && store.get(uid)!.has(messageId)) {
-            const msg = store.get(messageId)!.get(messageId)!
+            const msg = store.get(uid)!.get(messageId)!
             const { cachedPaths, message } = msg
             msg.locked = true
 
