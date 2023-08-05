@@ -165,7 +165,7 @@ async function run() {
     setInterval(() => page.reload(), 30 * 60 * 1000)
 }
 
-function handleNewMessage(delta: any, myUid: string, page: Page): MessageData {
+function handleNewMessage(delta: any, myUid: string, page: Page): NewMessageData {
     const senderUid = delta.messageMetadata.actorFbId
     const isSelf = senderUid === myUid
     const groupChatId = delta.messageMetadata.cid.conversationFbid
@@ -174,15 +174,17 @@ function handleNewMessage(delta: any, myUid: string, page: Page): MessageData {
     const rawAttachments = delta.attachments ?? []
     const messageId = delta.messageMetadata.messageId
     const attachments = makeAttachmentsIterable(rawAttachments, page, uid, messageId)
+    const message = delta.body ?? ''
 
     const data = {
-        message: delta.body ?? '',
+        message,
         messageId, 
         senderUid,
         uid,
         isSelf,
         isGroupChat: !!groupChatId,
-        attachments
+        attachments,
+        isBot: message.startsWith('\u200B')
     } as NewMessageData
     
     return data

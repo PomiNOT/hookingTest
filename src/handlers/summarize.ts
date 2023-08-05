@@ -14,20 +14,48 @@ if (!process.env.OPENAI_API_KEY) {
     api.maxHistory = 0
 }
 
+function numberToLetter(num: number): string {
+    let result = '';
+    const base = 'A'.charCodeAt(0);
+  
+    while (num >= 0) {
+      result = String.fromCharCode(num % 26 + base) + result;
+      num = Math.floor(num / 26) - 1;
+    }
+  
+    return result;
+}
+
 export default async function summarize({ msgData }: HandlerRequest): Promise<HandlerResponse> {
     const roomRef = db.collection('rooms').doc(msgData.uid).collection('messages')
-    const room = await roomRef.limit(20).orderBy('timestamp', 'desc').get()
+    const room = await roomRef.limitToLast(20).orderBy('timestamp', 'asc').get()
 
     if (!room.empty) {
         const messages: Message[] = room.docs.map(snap => snap.data() as Message)
-        const textMessages = messages.filter(({ message }) => !!message).map(({ message, timestamp, sender }) => {
-            const date = DateTime.fromMillis((timestamp as Timestamp).toMillis())
-            return `At ${date.toFormat('DD HH:mm:ss')} ${sender} said: ${message}`
+        const namesAssoc: { [key: string]: string } = {}
+        let count = 0
+        
+        const filtedMessages = messages.filter(({ message }) => !!message)
+
+        for (const { sender } of filtedMessages) {
+            if (!namesAssoc[sender]) {
+                namesAssoc[sender] = numberToLetter(count)
+                count++
+            }
+        }
+
+        const textMessages = filtedMessages.map(({ message, timestamp, sender }) => {
+            const date = DateTime
+                            .fromMillis((timestamp as Timestamp).toMillis())
+                            .setZone('Asia/Ho_Chi_Minh')
+            return `At ${date.toFormat('DD HH:mm:ss')} ${namesAssoc[sender]} said: ${message}`
         })
+
 
         if (textMessages.length < 1) return null
 
-        const prompt = `Summarize the key takeaways from this conversation, order of messages from latest to oldest:\n${textMessages.join('\n')}`
+        const prompt = `Write a detailed summary for this chat:\n${textMessages.join('\n')}`
+        console.log(prompt)
         const answer = await api.getChatResponse(prompt, msgData.uid)
         return answer
     }

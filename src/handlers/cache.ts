@@ -60,7 +60,8 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
             }
         }
     } else if (commandName === '*') {
-        const { senderUid, attachments, messageId } = msgData as NewMessageData
+        const { senderUid, attachments, messageId, isBot } = msgData as NewMessageData
+        if (isBot) return null
 
         const message: Message = {
             sender: senderUid,

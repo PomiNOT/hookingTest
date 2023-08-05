@@ -16,6 +16,7 @@ export interface NewMessageData extends CommonMessageData {
     message: string
     messageId: string
     senderUid: string
+    isBot: boolean
     attachments: Attachments
 }
 
@@ -276,11 +277,11 @@ export default class Router {
         await page.bringToFront()
         if (typeof response === 'string') {
             await page.waitForSelector('textarea[name="body"]')
-            await page.type('textarea[name="body"]', response)
+            await page.type('textarea[name="body"]', '\u200B' + response)
             await page.click('button[name="send"]', { delay: 1000 })
         } else {
             await page.waitForSelector('textarea[name="body"]')
-            await page.type('textarea[name="body"]', response.answer)
+            await page.type('textarea[name="body"]', '\u200B' + response.answer)
 
             for (const file of response.filePaths) {
                 await page.waitForSelector('input[name="photo"]')
