@@ -1,4 +1,4 @@
-import { HandlerRequest, HandlerResponse } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router.js'
 
 export default async function run({ body }: HandlerRequest): Promise<HandlerResponse> {
     if (process.env.GLOT_API_KEY) {

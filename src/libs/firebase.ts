@@ -1,4 +1,4 @@
-import { credential } from 'firebase-admin'
+import admin from 'firebase-admin'
 import { initializeApp, ServiceAccount } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
@@ -13,7 +13,7 @@ try {
     }
 
     initializeApp({
-      credential: credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccount),
       storageBucket: process.env.BUCKET_NAME
     })
 } catch(e) {

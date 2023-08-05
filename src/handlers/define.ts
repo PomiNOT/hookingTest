@@ -1,4 +1,4 @@
-import { HandlerRequest, HandlerResponse } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router.js'
 
 export default async function define({ args }: HandlerRequest): Promise<HandlerResponse> {
     const word = args[0]

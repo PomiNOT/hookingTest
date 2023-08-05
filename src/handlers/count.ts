@@ -1,5 +1,5 @@
-import { HandlerRequest, HandlerResponse } from '../router'
-import { db } from '../libs/firebase'
+import { HandlerRequest, HandlerResponse } from '../router.js'
+import { db } from '../libs/firebase.js'
 import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function catchAll({ args, msgData }: HandlerRequest): Promise<HandlerResponse> {

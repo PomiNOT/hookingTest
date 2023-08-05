@@ -1,20 +1,19 @@
-import { config } from 'dotenv'
-config()
-
+import 'dotenv/config.js'
 import { launch, Page } from 'puppeteer-core'
-import Router, { AttachmentIterator, AttachmentIteratorResult, Attachments, MessageData, NewMessageData, ProcessingInput, ProcessingOutput, TypingData, UnsentData } from './router'
-import { removeImagesAndCss } from './common'
-import Queue from './libs/queue'
-import KVStore from './libs/kv'
+import Router, { AttachmentIterator, AttachmentIteratorResult, Attachments, MessageData, NewMessageData, ProcessingInput, ProcessingOutput, TypingData, UnsentData } from './router.js'
+import { removeImagesAndCss } from './common.js'
+import Queue from './libs/queue.js'
+import KVStore from './libs/kv.js'
 
-import calc from './handlers/calc'
-import define from './handlers/define'
-import wordle from './handlers/wordle'
-import busyResponder from './handlers/busyResponder'
-import count from './handlers/count'
-import callme from './handlers/callme'
-import runCommand from './handlers/run'
-import cache from './handlers/cache'
+import calc from './handlers/calc.js'
+import define from './handlers/define.js'
+import wordle from './handlers/wordle.js'
+import busyResponder from './handlers/busyResponder.js'
+import count from './handlers/count.js'
+import callme from './handlers/callme.js'
+import runCommand from './handlers/run.js'
+import cache from './handlers/cache.js'
+import summarize from './handlers/summarize.js'
 
 const kvStore = new KVStore()
 async function run() {
@@ -23,6 +22,7 @@ async function run() {
     Router.registerCommandHandler(['newwordle', 'g', 'reveal', 'tries'], wordle)
     Router.registerCommandHandler(['callme'], callme)
     Router.registerCommandHandler(['run'], runCommand)
+    Router.registerCommandHandler(['summarize'], summarize)
     Router.registerCommandHandler(['*'], busyResponder)
     Router.registerCommandHandler(['*'], count)
     Router.registerCommandHandler(['*'], cache)
@@ -249,3 +249,5 @@ if (process.env.KV_API_KEY) {
 }
 
 console.log('[Server] Started')
+
+export {}

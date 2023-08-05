@@ -1,4 +1,4 @@
-import { HandlerRequest, HandlerResponse } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router.js'
 //import { DateTime } from 'luxon'
 //import Chat from '../libs/openai'
 

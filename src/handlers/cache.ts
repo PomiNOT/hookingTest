@@ -1,25 +1,27 @@
-import { FilePath, HandlerRequest, HandlerResponse, NewMessageData, UnsentData } from '../router'
-import { db, storage } from '../libs/firebase'
-import { FieldValue } from 'firebase-admin/firestore'
+import { FilePath, HandlerRequest, HandlerResponse, NewMessageData, UnsentData } from '../router.js'
+import { db, storage } from '../libs/firebase.js'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { tmpdir } from 'os'
 import { mkdtemp } from 'fs/promises'
 import { createWriteStream } from 'fs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
+import { DateTime } from 'luxon'
 
-interface Message {
+export interface Message {
     sender: string,
     message: string,
     messageId: string,
-    timestamp: FieldValue,
+    timestamp: FieldValue | Timestamp,
     attachments: string[]
 }
 interface InMemoryMessage extends Message {
     cachedPaths: Promise<string>[],
-    locked: boolean
+    locked: boolean,
+    time: DateTime
 }
 
-const store: Map<string, InMemoryMessage> = new Map()
+export const store: Map<string, Map<string, InMemoryMessage>> = new Map()
 const MAX_LENGTH = 20
 
 export default async function cache({ args, msgData, commandName }: HandlerRequest): Promise<HandlerResponse> {
@@ -29,8 +31,8 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
         console.log(msgData)
         const { isGroupChat, messageId } = msgData as UnsentData
         if (isGroupChat) return null
-        if (store.has(messageId)) {
-            const msg = store.get(messageId)!
+        if (store.has(uid) && store.get(uid)!.has(messageId)) {
+            const msg = store.get(messageId)!.get(messageId)!
             const { cachedPaths, message } = msg
             msg.locked = true
 
@@ -56,7 +58,7 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
                 store.delete(messageId)
             }
         }
-    } else if (commandName === '*' && !isSelf) {
+    } else if (commandName === '*') {
         const { senderUid, attachments, messageId } = msgData as NewMessageData
 
         const message: Message = {
@@ -116,25 +118,32 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
             }
         }
         
-        const outstanding = store.size - MAX_LENGTH
-        const keysIter = store.keys()
-        let key = keysIter.next()
-        for (let i = 0; i < outstanding && !key.done; i++) {
-            const message = store.get(key.value)!
+        for (const entry of store.values()) {
+            const outstanding = entry.size - MAX_LENGTH
+            const keysIter = entry.keys()
+            let key = keysIter.next()
+            for (let i = 0; i < outstanding && !key.done; i++) {
+                const message = entry.get(key.value)!
 
-            if (message.locked) continue
-            else {
-                store.delete(key.value)
-                await Promise.all(
-                    message.cachedPaths.map(path => path.then(unlink))
-                )
+                if (message.locked) continue
+                else {
+                    store.delete(key.value)
+                    await Promise.all(
+                        message.cachedPaths.map(path => path.then(unlink))
+                    )
+                }
             }
         }
 
-        store.set(messageId, {
+        if (!store.has(uid)) {
+            store.set(uid, new Map())
+        }
+
+        store.get(uid)!.set(messageId, {
             ...message,
             cachedPaths,
-            locked: false
+            locked: false,
+            time: DateTime.now()
         })
 
         await db.doc(`/rooms/${uid}/messages/${messageId}`).set(message)

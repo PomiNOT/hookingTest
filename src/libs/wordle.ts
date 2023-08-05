@@ -1,4 +1,4 @@
-import Words from './words'
+import Words from './words.js'
 import { EventEmitter } from 'events'
 import TypedEmitter from 'typed-emitter'
 

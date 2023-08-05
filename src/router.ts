@@ -1,7 +1,7 @@
 import { Browser, Page } from 'puppeteer-core'
-import { removeImagesAndCss } from './common'
+import { removeImagesAndCss } from './common.js'
 import { parse } from 'discord-command-parser'
-import KVStore from './libs/kv'
+import KVStore from './libs/kv.js'
 import { unlink } from 'fs/promises'
 
 type MessageType = 'new_message' | 'typing' | 'unsent'

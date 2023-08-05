@@ -1,4 +1,4 @@
-import { HandlerRequest, HandlerResponse } from '../router'
+import { HandlerRequest, HandlerResponse } from '../router.js'
 import { Parser, parser } from 'mathjs'
 
 const scopes = new Map<string, Parser>()

@@ -1,6 +1,6 @@
 import { HTTPRequest } from 'puppeteer-core'
-import { HandlerRequest } from '../router'
-import { removeImagesAndCss } from '../common'
+import { HandlerRequest } from '../router.js'
+import { removeImagesAndCss } from '../common.js'
 import { createServer } from 'http'
 import { parse } from 'url'
 import ytdl from '@distube/ytdl-core'
