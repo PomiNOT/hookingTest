@@ -74,6 +74,7 @@ async function run() {
         ],
         ignoreDefaultArgs: ['--mute-audio']
     })
+
     const page = await browser.newPage()
     page.setRequestInterception(true)
     page.on('request', removeImagesAndCss)
@@ -160,6 +161,15 @@ async function run() {
                 processingQueue.enqueue({ type, data, browser })
                 break
         }
+    })
+
+    kvStore.on('webhookMessage', (m) => {
+        console.log(`[Webhooks] Sending ${m.to} message "${m.message}"`)
+        outputQueue.enqueue({
+            uid: m.to,
+            response: m.message,
+            browser
+        })
     })
 
     setInterval(() => page.reload(), 30 * 60 * 1000)

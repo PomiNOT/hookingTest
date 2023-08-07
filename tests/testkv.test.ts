@@ -78,6 +78,59 @@ describe('KVStore', () => {
     expect(kv.store.get('foo')).toBe(undefined)
   })
 
+  test('POST with valid send content emits an event', (done) => {
+    fetch('http://localhost:8080/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'secret-key',
+      },
+      body: JSON.stringify({
+        to: '123',
+        message: 'hello'
+      }),
+    }).then(response => expect(response.status).toBe(200))
+
+    kv.on('webhookMessage', (m) => {
+      expect(m).toEqual({
+        to: '123',
+        message: 'hello'
+      })
+      done()
+    })
+  })
+
+  test('POST with invalid path name returns 400', async () => {
+    const res = await fetch('http://localhost:8080/sendf', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'secret-key',
+      },
+      body: JSON.stringify({
+        to: '123',
+        message: 'hello'
+      }),
+    })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('POST with missing fields returns 400', async () => {
+    const res = await fetch('http://localhost:8080/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'secret-key',
+      },
+      body: JSON.stringify({
+        to: '123'
+      }),
+    })
+
+    expect(res.status).toBe(400)
+  })
+
   test('Unsupported method returns 405', async () => {
     const res = await fetch('http://localhost:8080/unsupported', {
       method: 'PUT',

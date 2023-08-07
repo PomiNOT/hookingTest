@@ -2,7 +2,7 @@ import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
     role: 'system',
-    content: 'You are a text summarist. Write a short summary in Vietnamese for a chat given by the user in short essay format.'
+    content: 'You are a text summarist. Write a short summary in for a chat given by the user in short essay format.'
 }
 
 export default class Chat {
@@ -77,9 +77,9 @@ export default class Chat {
                 SYSTEM_MESSAGE,
                 ...messages!
             ],
-            temperature: 0.9,
+            temperature: 0.2,
             top_p: 1,
-            frequency_penalty: 1
+            frequency_penalty: 0
         })
 
         const answer = response.data.choices[0].message

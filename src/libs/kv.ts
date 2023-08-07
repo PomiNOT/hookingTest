@@ -1,7 +1,18 @@
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http'
+import { EventEmitter } from 'events'
+import TypedEmitter from 'typed-emitter'
 import { parse } from 'url'
 
-class KVStore {
+type MessageEvents = {
+    webhookMessage: (m: Message) => void
+}
+
+interface Message {
+    to: string,
+    message: string
+}
+
+class KVStore extends (EventEmitter as new () => TypedEmitter<MessageEvents>) {
     public store = new Map<string, any>()
     private server: Server | null = null
     private apiKey: string | null = null
@@ -11,7 +22,9 @@ class KVStore {
             res.writeHead(200)
             res.end(Date.now().toString())
             return
-        } else if (req.url && req.method == 'POST' && parse(req.url).pathname == '/updatekv') {
+        }
+        
+        if (req.url && req.method == 'POST') {
             if(req.headers['content-type'] != 'application/json') {
                 res.writeHead(400)
                 res.end('Content type should be application/json')
@@ -21,11 +34,19 @@ class KVStore {
             if (
                 !req.headers['authorization'] ||
                 this.apiKey == null ||
-                req.headers['authorization'] != this.apiKey
+                req.headers['authorization'] !== this.apiKey
             ) {
                 console.log(`[KV Store] Attempt blocked from ${req.socket.remoteAddress}`)
                 res.writeHead(403)
                 res.end('Forbidden')
+                return
+            }
+
+            const pathname = parse(req.url).pathname
+
+            if (pathname !== '/updatekv' && pathname !== '/send') {
+                res.writeHead(400)
+                res.end('Invalid operation')
                 return
             }
 
@@ -40,13 +61,31 @@ class KVStore {
                 try {
                     const obj = JSON.parse(content) as { [k: string]: any }
 
-                    for (const key of Object.keys(obj)) {
-                        this.store.set(key, obj[key])
+                    if (pathname === '/updatekv') {
+                        for (const key of Object.keys(obj)) {
+                            this.store.set(key, obj[key])
+                        }
+
+                        res.writeHead(200)
+                        res.end('Updated keys')
+                        return
+                    } else if (pathname === '/send') {
+                        const { to, message } = obj
+                        if (
+                            typeof to !== 'string' ||
+                            typeof message !== 'string'
+                        ) throw new Error()
+
+                        this.emit('webhookMessage', {
+                            to,
+                            message
+                        })
+
+                        res.writeHead(200)
+                        res.end('Received')
+                        return
                     }
 
-                    res.writeHead(200)
-                    res.end('Updated keys')
-                    return
                 } catch(_) {
                     res.writeHead(400)
                     res.end('Malformed body')
