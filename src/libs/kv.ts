@@ -25,12 +25,6 @@ class KVStore extends (EventEmitter as new () => TypedEmitter<MessageEvents>) {
         }
         
         if (req.url && req.method == 'POST') {
-            if(req.headers['content-type'] != 'application/json') {
-                res.writeHead(400)
-                res.end('Content type should be application/json')
-                return
-            }
-
             if (
                 !req.headers['authorization'] ||
                 this.apiKey == null ||

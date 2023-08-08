@@ -65,19 +65,6 @@ describe('KVStore', () => {
     expect(kv.store.get('foo')).toBe(undefined)
   })
 
-  test('POST with invalid content type returns 400', async () => {
-    const res = await fetch('http://localhost:8080/updatekv', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain',
-        Authorization: 'secret-key',
-      },
-      body: JSON.stringify({ foo: 'bar' }),
-    })
-    expect(res.status).toBe(400)
-    expect(kv.store.get('foo')).toBe(undefined)
-  })
-
   test('POST with valid send content emits an event', (done) => {
     fetch('http://localhost:8080/send', {
       method: 'POST',
