@@ -93,8 +93,7 @@ async function run() {
         console.error('Failed to parse cookies')
     }
 
-
-    await page.goto('https://m.facebook.com/messages')
+    await page.goto('https://messenger.com')
 
     const cdp = await page.target().createCDPSession()
     await cdp.send('Network.enable')
@@ -117,49 +116,12 @@ async function run() {
             return
         }
 
-        let type = ''
-        const deltas = obj?.deltas
-        if (deltas && deltas.length > 0) type = 'deltas'
-        if (obj.type && obj.type == 'typ') type = 'typing'
+        if (obj.request_id === undefined || obj.request_id !== null)  return
+        const payload = JSON.parse(obj.payload)
         
-        switch (type) {
-            case 'deltas':
-                for (const delta of deltas) {
-                    switch (delta.class) {
-                        case 'NewMessage':
-                            const data = handleNewMessage(delta, myUid, page)
-                            processingQueue.enqueue({ type: 'new_message', data, browser })
-                            break
-                        case 'ClientPayload':
-                            const payload = Buffer.from(delta.payload).toString()
-                            const json = JSON.parse(payload)
-                            const recallData = json.deltas[0].deltaRecallMessageData
-                            if (recallData) {
-                                const senderUid = recallData.senderID
-                                if (senderUid === myUid) break
-
-                                const threadId = recallData.threadKey.threadFbId ?? recallData.threadKey.otherUserFbId
-
-                                const data: UnsentData = {
-                                    uid: String(threadId),
-                                    isGroupChat: threadId !== senderUid,
-                                    isSelf: false,
-                                    messageId: recallData.messageID,
-                                    senderUid
-                                }
-
-                                processingQueue.enqueue({ type: 'unsent', browser, data })
-                            }
-                            break
-                    }
-                }
-                break
-            case 'typing':
-                const uid = obj.sender_fbid.toString()
-                const isSelf = uid == myUid
-                const data = { uid, isSelf, isGroupChat: false, typing: obj.state == 1 } as TypingData
-                processingQueue.enqueue({ type, data, browser })
-                break
+        const data = extractNewMessageInfo(payload, myUid, page)
+        if (data) {
+            processingQueue.enqueue({ type: 'new_message', data, browser })
         }
     })
 
@@ -175,29 +137,41 @@ async function run() {
     setInterval(() => page.reload(), 30 * 60 * 1000)
 }
 
-function handleNewMessage(delta: any, myUid: string, page: Page): NewMessageData {
-    const senderUid = delta.messageMetadata.actorFbId
-    const isSelf = senderUid === myUid
-    const groupChatId = delta.messageMetadata.cid.conversationFbid
-    let uid = !!groupChatId ? groupChatId : isSelf ? delta.messageMetadata.threadKey.otherUserFbId : senderUid
+function dfs(item: any[], key: string): any[] | null {
+    if (typeof item[1] === 'string' && item[1] === key) return item
+    for (const it of item) {
+        if (Array.isArray(it)) {
+            const ret = dfs(it, key)
+            if (ret !== null) return ret
+        }
+    }
+    return null
+}
 
-    const rawAttachments = delta.attachments ?? []
-    const messageId = delta.messageMetadata.messageId
-    const attachments = makeAttachmentsIterable(rawAttachments, page, uid, messageId)
-    const message = delta.body ?? ''
+function extractNewMessageInfo(payload: any, myUid: string, page: Page): NewMessageData | null {
+    const searchResult = dfs(payload.step, 'insertMessage')
+    if (!searchResult) return null
 
-    const data = {
+    const message = searchResult[2]
+    const senderUid = searchResult[12][1]
+    const threadId = searchResult[5][1]
+    const messageId = searchResult[10]
+
+    if (typeof message !== 'string') return null
+    if (typeof senderUid !== 'string') return null
+    if (typeof threadId !== 'string') return null
+    if (typeof messageId !== 'string') return null
+
+    return {
         message,
-        messageId, 
+        messageId,
         senderUid,
-        uid,
-        isSelf,
-        isGroupChat: !!groupChatId,
-        attachments,
-        isBot: message.startsWith('\u200B')
+        uid: threadId,
+        attachments: makeAttachmentsIterable([], page, threadId, messageId),
+        isBot: message.startsWith('\u200E'),
+        isSelf: senderUid === myUid,
+        isGroupChat: !threadId.startsWith('100')
     } as NewMessageData
-    
-    return data
 }
 
 function makeAttachmentsIterable(attachments: any[], page: Page, uid: string, mid: string): Attachments {
