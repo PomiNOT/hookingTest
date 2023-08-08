@@ -81,7 +81,7 @@ export default async function cache({ args, msgData, commandName }: HandlerReque
             tmpDir = await mkdtemp(tmpDirPrefix)
         }
 
-        for await (const attachment of attachments) {
+        for (const attachment of attachments) {
             if (attachment !== null) {
                 const response = await fetch(attachment)
 

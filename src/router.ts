@@ -17,7 +17,7 @@ export interface NewMessageData extends CommonMessageData {
     messageId: string
     senderUid: string
     isBot: boolean
-    attachments: Attachments
+    attachments: string[]
 }
 
 export interface TypingData extends CommonMessageData {
@@ -30,22 +30,6 @@ export interface UnsentData extends CommonMessageData {
 }
 
 export type MessageData = NewMessageData | TypingData | UnsentData
-
-export interface Attachments {
-    length: number
-    cache: (string | null)[]
-    [Symbol.asyncIterator](): AttachmentIterator
-}
-
-export interface AttachmentIterator {
-    i: number,
-    next(): Promise<AttachmentIteratorResult>
-}
-
-export interface AttachmentIteratorResult {
-    value: string | null,
-    done: boolean
-}
 
 export interface ProcessingInput {
     type: MessageType
@@ -173,8 +157,6 @@ export default class Router {
                 }, '!')
 
                 if (parsed.success && this.commandHandlers.has(parsed.command)) {
-                    console.log(parsed)
-
                     const request = {
                         commandName: parsed.command,
                         args: parsed.arguments,

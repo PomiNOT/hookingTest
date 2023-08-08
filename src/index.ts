@@ -1,6 +1,6 @@
 import 'dotenv/config.js'
 import { launch, Page } from 'puppeteer-core'
-import Router, { AttachmentIterator, AttachmentIteratorResult, Attachments, MessageData, NewMessageData, ProcessingInput, ProcessingOutput, TypingData, UnsentData } from './router.js'
+import Router, { NewMessageData, ProcessingInput, ProcessingOutput } from './router.js'
 import { removeImagesAndCss } from './common.js'
 import Queue from './libs/queue.js'
 import KVStore from './libs/kv.js'
@@ -116,11 +116,12 @@ async function run() {
             return
         }
 
-        if (obj.request_id === undefined || obj.request_id !== null)  return
+        if (obj.request_id === undefined || obj.request_id !== null) return
         const payload = JSON.parse(obj.payload)
-        
+
         const data = extractNewMessageInfo(payload, myUid, page)
         if (data) {
+            console.log(data)
             processingQueue.enqueue({ type: 'new_message', data, browser })
         }
     })
@@ -137,94 +138,76 @@ async function run() {
     setInterval(() => page.reload(), 30 * 60 * 1000)
 }
 
-function dfs(item: any[], key: string): any[] | null {
-    if (typeof item[1] === 'string' && item[1] === key) return item
-    for (const it of item) {
-        if (Array.isArray(it)) {
-            const ret = dfs(it, key)
-            if (ret !== null) return ret
+function bfs(items: any[], keys: string[]): { [key: string]: any[][] } {
+    const results: { [key: string]: any[][] } = {}
+    const queue = [items]
+
+    let queueItem
+    while ((queueItem = queue.pop()) !== undefined) {
+        for (const it of queueItem) {
+            if (Array.isArray(it)) {
+                let found = false
+
+                for (const key of keys) {
+                    if (typeof it[1] === 'string' && it[1] === key) {
+                        if (results[key] === undefined) {
+                            results[key] = []
+                        }
+
+                        results[key].push(it)
+                        found = true
+                    }
+                }
+
+                if (!found) queue.push(it)
+            }
         }
     }
-    return null
+
+    return results
 }
 
 function extractNewMessageInfo(payload: any, myUid: string, page: Page): NewMessageData | null {
-    const searchResult = dfs(payload.step, 'insertMessage')
-    if (!searchResult) return null
+    const results = bfs(payload.step, ['insertMessage', 'insertBlobAttachment'])
+    if (Object.keys(results).length <= 0 || !results['insertMessage']) return null
 
-    const message = searchResult[2]
-    const senderUid = searchResult[12][1]
-    const threadId = searchResult[5][1]
-    const messageId = searchResult[10]
+    const insertMessageResult = results['insertMessage'][0]
 
-    if (typeof message !== 'string') return null
+    let message = insertMessageResult[2]
+
+    if (typeof message === 'string') { }
+    else if (Array.isArray(message) && message[0] === 9) message = ''
+    else return null
+
+    const senderUid = insertMessageResult[12][1]
+    const threadId = insertMessageResult[5][1]
+    const messageId = insertMessageResult[10]
+
     if (typeof senderUid !== 'string') return null
     if (typeof threadId !== 'string') return null
     if (typeof messageId !== 'string') return null
+
+    const attachments: string[] = []
+
+    if (results['insertBlobAttachment']) {
+        for (const attachment of results['insertBlobAttachment']) {
+            if (attachment !== undefined) {
+                attachments.push(attachment[5])
+            }
+        }
+    }
 
     return {
         message,
         messageId,
         senderUid,
         uid: threadId,
-        attachments: makeAttachmentsIterable([], page, threadId, messageId),
+        attachments,
         isBot: message.startsWith('\u200E'),
         isSelf: senderUid === myUid,
         isGroupChat: !threadId.startsWith('100')
     } as NewMessageData
 }
-
-function makeAttachmentsIterable(attachments: any[], page: Page, uid: string, mid: string): Attachments {
-    return {
-        length: attachments.length,
-        cache: [],
-        [Symbol.asyncIterator](): AttachmentIterator {
-            const that = this
-
-            return {
-                i: 0,
-                async next(): Promise<AttachmentIteratorResult> {
-                    const done = this.i > that.length - 1
-                    
-                    if (done) return {
-                        value: null,
-                        done
-                    }
-
-                    if (that.cache[this.i]) return {
-                        done,
-                        value: that.cache[this.i]
-                    }
-
-                    const fbid = attachments[this.i].fbid
-                    const large_preview = attachments[this.i].mercury.blob_attachment.large_preview.uri ?? null
-
-                    const value = await page.evaluate(async (uid, mid, fbid) => {
-                        const query = new URLSearchParams()
-                        query.set('mid', mid)
-                        query.set('threadid', uid)
-                        query.set('fbid', fbid)
-
-                        const response = await fetch('/messages/attachment_preview/?' + query.toString(), {
-                            credentials: 'include'
-                        })
-
-                        const text = await response.text()
-                        const reg = /href="(https:\/\/scontent.*?)"/
-                        const match = reg.exec(text)
-                        return match ? match[1].replace(/&amp;/g, '&') : null
-                    }, uid, mid, fbid) ?? large_preview
-
-                    that.cache.push(value)
-
-                    this.i++
-                    return { done, value }
-                }
-            }
-        }
-    }
-}
-
 
 run()
 
@@ -236,4 +219,4 @@ if (process.env.KV_API_KEY) {
 
 console.log('[Server] Started')
 
-export {}
+export { }
