@@ -6,10 +6,11 @@ ENV CHROME_BIN="/usr/bin/chromium-browser" \
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache \
-    chromium bash
+    chromium bash dumb-init
 RUN adduser --shell /sbin/nologin --disabled-password runner
 WORKDIR /home/runner/app
 COPY . .
 RUN npm install
 USER runner
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["npm", "run", "start-prod"]

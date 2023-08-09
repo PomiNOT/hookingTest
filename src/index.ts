@@ -60,7 +60,8 @@ async function run() {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--no-zygote',
-        '--single-process'
+        '--single-process',
+        '--disable-dev-shm-usage'
     ] : []
 
     const browser = await launch({
@@ -70,6 +71,8 @@ async function run() {
         args: [
             '--use-fake-device-for-media-stream',
             '--use-fake-ui-for-media-stream',
+            '--disable-speech-api',
+            '--disable-background-networking',
             ...dockerArgs
         ],
         ignoreDefaultArgs: ['--mute-audio']
@@ -77,6 +80,7 @@ async function run() {
 
     const page = await browser.newPage()
     page.setRequestInterception(true)
+    page.setCacheEnabled(false)
     page.on('request', removeImagesAndCss)
 
     let myUid: string
@@ -92,6 +96,12 @@ async function run() {
     } catch (_) {
         console.error('Failed to parse cookies')
     }
+
+    page.on('load', () => {
+      page.evaluate(() => {
+        document.body.innerHTML = ''
+      })
+    })
 
     await page.goto('https://messenger.com')
 
