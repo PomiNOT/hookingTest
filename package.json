@@ -24,11 +24,13 @@
     "mathjs": "^11.9.1",
     "openai": "^3.3.0",
     "puppeteer-core": "^21.0.1",
+    "secure-random-password": "^0.2.3",
     "ts-node": "^10.9.1",
     "typed-emitter": "^2.1.0"
   },
   "devDependencies": {
     "@types/luxon": "^3.3.1",
+    "@types/secure-random-password": "^0.2.1",
     "copy-webpack-plugin": "^11.0.0",
     "jest-ts-webcompat-resolver": "^1.0.0",
     "ts-jest": "^29.1.1",

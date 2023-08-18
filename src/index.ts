@@ -14,6 +14,7 @@ import callme from './handlers/callme.js'
 import runCommand from './handlers/run.js'
 import cache from './handlers/cache.js'
 import summarize from './handlers/summarize.js'
+import what from './handlers/what.js'
 
 const kvStore = new KVStore()
 async function run() {
@@ -23,6 +24,7 @@ async function run() {
     Router.registerCommandHandler(['callme'], callme)
     Router.registerCommandHandler(['run'], runCommand)
     Router.registerCommandHandler(['summarize'], summarize)
+    Router.registerCommandHandler(['what'], what)
     Router.registerCommandHandler(['*'], busyResponder)
     Router.registerCommandHandler(['*'], count)
     Router.registerCommandHandler(['*'], cache)
