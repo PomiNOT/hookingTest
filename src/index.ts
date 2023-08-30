@@ -26,11 +26,10 @@ async function run() {
     Router.registerCommandHandler(['run'], runCommand)
     Router.registerCommandHandler(['summarize'], summarize)
     Router.registerCommandHandler(['what'], what)
-    Router.registerCommandHandler(['*', 'toggle_translation', 'set_language'], translate)
+    Router.registerCommandHandler(['*', 'translate_me', 'set_language'], translate)
     Router.registerCommandHandler(['*'], busyResponder)
     Router.registerCommandHandler(['*'], count)
     Router.registerCommandHandler(['*'], cache)
-    Router.registerUnsentHandler(cache)
     Router.registerKVStore(kvStore)
 
     const processingQueue = new Queue<ProcessingInput, Promise<ProcessingOutput[]>>({
