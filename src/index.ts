@@ -15,6 +15,7 @@ import runCommand from './handlers/run.js'
 import cache from './handlers/cache.js'
 import summarize from './handlers/summarize.js'
 import what from './handlers/what.js'
+import translate from './handlers/translate.js'
 
 const kvStore = new KVStore()
 async function run() {
@@ -25,6 +26,7 @@ async function run() {
     Router.registerCommandHandler(['run'], runCommand)
     Router.registerCommandHandler(['summarize'], summarize)
     Router.registerCommandHandler(['what'], what)
+    Router.registerCommandHandler(['*', 'toggle_translation', 'set_language'], translate)
     Router.registerCommandHandler(['*'], busyResponder)
     Router.registerCommandHandler(['*'], count)
     Router.registerCommandHandler(['*'], cache)

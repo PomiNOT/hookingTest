@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@distube/ytdl-core": "^4.11.17",
+    "@vitalets/google-translate-api": "^9.2.0",
     "bing-chat": "^0.2.3",
     "discord-command-parser": "^1.5.3",
     "dotenv": "^16.3.1",
