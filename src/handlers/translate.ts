@@ -104,6 +104,11 @@ export default async function translate({ args, body, kv, commandName, msgData }
     }
 
     if (commandName === 'translate_me') {
+        if (args[0] && args[0] === 'off') {
+            SessionManager.deleteSession(uid, senderUid)
+            return `You are removed from the list of participants`
+        }
+
         SessionManager.createSession(uid, senderUid, timeout)
         return `You are added to the list of participants`
     } else if (commandName === 'set_language') {
