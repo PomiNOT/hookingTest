@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - use-messenger-backend
+  workflow_dispatch:
 jobs:
   test-and-deploy:
     name: Run tests and build image
