@@ -94,8 +94,8 @@ class SessionManager {
 }
 
 export default async function translate({ args, body, kv, commandName, msgData }: HandlerRequest): Promise<HandlerResponse> {
-    const { isBot, isGroupChat, senderUid, uid } = msgData as NewMessageData;
-    if (isBot || isGroupChat) return null;
+    const { isBot, senderUid, uid } = msgData as NewMessageData;
+    if (isBot) return null;
 
     let timeout = 10 * 60
     const timeoutSetting = kv?.store.get('translate_timeout')

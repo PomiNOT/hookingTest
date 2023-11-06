@@ -1,21 +1,21 @@
-import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
+import OpenAI from 'openai'
+type ChatRequest = OpenAI.ChatCompletionMessageParam;
 
-const SYSTEM_MESSAGE: ChatCompletionRequestMessage = {
+const SYSTEM_MESSAGE: ChatRequest = {
     role: 'system',
     content: 'You are a text summarist. Write a short summary in for a chat given by the user in short essay format.'
 }
 
 export default class Chat {
-    private _histories: Map<string, ChatCompletionRequestMessage[]> = new Map()
+    private _histories: Map<string, ChatRequest[]> = new Map()
     private _maxHistory: number = 10
     private _maxTokens: number = 700
     private _maxMessageLength: number = 500
-    private api: OpenAIApi | null = null
+    private api: OpenAI | null = null
     public testing: boolean = false
     
     set apiKey(apiKey: string) {
-        const conf = new Configuration({ apiKey })
-        this.api = new OpenAIApi(conf)
+        this.api = new OpenAI({ apiKey })
     }
 
     get maxHistory(): number {
@@ -27,7 +27,7 @@ export default class Chat {
         this._maxHistory = max
     }
 
-    get histories(): Map<string, ChatCompletionRequestMessage[]> {
+    get histories(): Map<string, ChatRequest[]> {
         return this._histories
     }
 
@@ -70,7 +70,7 @@ export default class Chat {
 
         messages!.push({ role: 'user', content })
 
-        const response = await this.api.createChatCompletion({
+        const response = await this.api.chat.completions.create({
             model: 'gpt-3.5-turbo',
             max_tokens: this.maxTokens,
             messages: [
@@ -82,7 +82,7 @@ export default class Chat {
             frequency_penalty: 0
         })
 
-        const answer = response.data.choices[0].message
+        const answer = response.choices[0].message
         if (!answer) return null
 
         messages!.push(answer)

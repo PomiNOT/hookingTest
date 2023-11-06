@@ -117,8 +117,8 @@ export default async function callMe({ msgData, args, browser }: HandlerRequest)
 
         if (!played && buf.includes('ICE_CANDIDATE')) {
             played = true
-            console.log('Playing audio...')
             clearTimeout(cancelCallTimeout)
+            console.log('Playing audio...')
             await page.evaluate(() => {
                 window.dispatchEvent(new Event('play_now'))
             })

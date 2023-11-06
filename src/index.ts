@@ -64,7 +64,8 @@ async function run() {
         '--disable-setuid-sandbox',
         '--no-zygote',
         '--single-process',
-        '--disable-dev-shm-usage'
+        '--disable-dev-shm-usage',
+        ...(process.env.ALL_PROXY ? [`--proxy-server=${process.env.ALL_PROXY}`] : [])
     ] : []
 
     const browser = await launch({
@@ -86,58 +87,8 @@ async function run() {
     page.setCacheEnabled(false)
     page.on('request', removeImagesAndCss)
 
-    let myUid: string
-    try {
-        const fbJson = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
-        const messengerJson = Buffer.from(process.env.MESSENGER_COOKIES ?? '', 'base64').toString('utf-8')
-        const fbCookies = JSON.parse(fbJson)
-        const messengerCookies = JSON.parse(messengerJson)
-        //@ts-ignore
-        myUid = fbCookies.filter(o => o.name == 'c_user')[0].value
-        if (typeof myUid !== 'string') throw new Error('Assertion: myUid was not string')
-        await page.setCookie(...fbCookies.concat(messengerCookies))
-    } catch (_) {
-        console.error('Failed to parse cookies')
-    }
-
-    page.on('load', () => {
-      page.evaluate(() => {
-        document.body.innerHTML = ''
-      })
-    })
-
-    await page.goto('https://messenger.com')
-
-    const cdp = await page.target().createCDPSession()
-    await cdp.send('Network.enable')
-    await cdp.send('Page.enable')
-
-    cdp.on('Network.webSocketFrameReceived', async ({ response }) => {
-        const buf = Buffer.from(response.payloadData, 'base64')
-        const str = buf.toString('utf-8')
-
-        if (!str.includes('{')) {
-            return
-        }
-
-        const rawJSON = str.slice(str.indexOf('{'))
-
-        let obj
-        try {
-            obj = JSON.parse(rawJSON)
-        } catch (_) {
-            return
-        }
-
-        if (obj.request_id === undefined || obj.request_id !== null) return
-        const payload = JSON.parse(obj.payload)
-
-        const data = extractNewMessageInfo(payload, myUid, page)
-        if (data) {
-            console.log(data)
-            processingQueue.enqueue({ type: 'new_message', data, browser })
-        }
-    })
+    const myUid: string = await initializeCookies()
+    await startParsingMessages(myUid)
 
     kvStore.on('webhookMessage', (m) => {
         console.log(`[Webhooks] Sending ${m.to} message "${m.message}"`)
@@ -149,6 +100,66 @@ async function run() {
     })
 
     setInterval(() => page.reload(), 30 * 60 * 1000)
+
+    async function startParsingMessages(accountUid: string) {
+        page.on('load', () => {
+            page.evaluate(() => {
+                document.body.innerHTML = ''
+            })
+        })
+
+        await page.goto('https://messenger.com')
+
+        const cdp = await page.target().createCDPSession()
+        await cdp.send('Network.enable')
+        await cdp.send('Page.enable')
+
+        cdp.on('Network.webSocketFrameReceived', async ({ response }) => {
+            const buf = Buffer.from(response.payloadData, 'base64')
+            const str = buf.toString('utf-8')
+
+            if (!str.includes('{')) {
+                return
+            }
+
+            const rawJSON = str.slice(str.indexOf('{'))
+
+            let obj
+            try {
+                obj = JSON.parse(rawJSON)
+            } catch (_) {
+                return
+            }
+
+            if (obj.request_id === undefined || obj.request_id !== null) return
+            const payload = JSON.parse(obj.payload)
+
+            const data = extractNewMessageInfo(payload, accountUid, page)
+            if (data) {
+                console.log(data)
+                processingQueue.enqueue({ type: 'new_message', data, browser })
+            }
+        })
+    }
+
+    async function initializeCookies(): Promise<string> {
+        try {
+            const fbJson = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
+            const messengerJson = Buffer.from(process.env.MESSENGER_COOKIES ?? '', 'base64').toString('utf-8')
+            const fbCookies = JSON.parse(fbJson)
+            const messengerCookies = JSON.parse(messengerJson)
+            //@ts-ignore
+            const uid = fbCookies.filter(o => o.name == 'c_user')[0].value
+            if (typeof uid !== 'string') throw new Error('Assertion: myUid was not string')
+            await page.setCookie(...fbCookies.concat(messengerCookies))
+
+            return uid
+        } catch (_) {
+            console.error('Failed to parse cookies')
+        }
+
+        return ''
+    }
 }
 
 function bfs(items: any[], keys: string[]): { [key: string]: any[][] } {
