@@ -76,8 +76,8 @@ export default class Router {
     private static unsentHandler: Handler | null = null
     private static kvStore: KVStore | null = null
     private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
-    private static _maxPages: number = 5
-    private static unusedTimeout: number = 120
+    private static _maxPages: number = 2
+    private static unusedTimeout: number = 30
     private static garbageCollector: NodeJS.Timer
 
     static {

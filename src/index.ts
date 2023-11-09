@@ -163,6 +163,7 @@ function bfs(items: any[], keys: string[]): { [key: string]: any[][] } {
     const queue = [items]
 
     let queueItem
+
     while ((queueItem = queue.pop()) !== undefined) {
         for (const it of queueItem) {
             if (Array.isArray(it)) {
