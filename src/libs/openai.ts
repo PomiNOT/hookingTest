@@ -1,18 +1,22 @@
 import OpenAI from 'openai'
 type ChatRequest = OpenAI.ChatCompletionMessageParam;
 
-const SYSTEM_MESSAGE: ChatRequest = {
-    role: 'system',
-    content: 'You are a text summarist. Write a short summary in for a chat given by the user in short essay format.'
-}
-
 export default class Chat {
     private _histories: Map<string, ChatRequest[]> = new Map()
     private _maxHistory: number = 10
     private _maxTokens: number = 700
     private _maxMessageLength: number = 500
     private api: OpenAI | null = null
+    private _systemMessage: ChatRequest
     public testing: boolean = false
+
+    constructor(systemMessage: ChatRequest) {
+        this._systemMessage = systemMessage
+    }
+
+    get systemMessage() {
+        return this._systemMessage
+    }
     
     set apiKey(apiKey: string) {
         this.api = new OpenAI({ apiKey })
@@ -74,7 +78,7 @@ export default class Chat {
             model: 'gpt-3.5-turbo',
             max_tokens: this.maxTokens,
             messages: [
-                SYSTEM_MESSAGE,
+                this.systemMessage,
                 ...messages!
             ],
             temperature: 0.2,

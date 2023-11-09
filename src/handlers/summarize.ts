@@ -3,9 +3,17 @@ import { Message } from './cache.js'
 import { db } from '../libs/firebase.js'
 import { DateTime } from 'luxon'
 import { Timestamp } from 'firebase-admin/firestore'
+import OpenAI from 'openai'
 import Chat from '../libs/openai.js'
 
-const api = new Chat()
+type ChatRequest = OpenAI.ChatCompletionMessageParam;
+
+const SYSTEM_MESSAGE: ChatRequest = {
+    role: 'system',
+    content: 'You are a text summarist. Write a short summary in for a chat given by the user in short essay format.'
+}
+
+const api = new Chat(SYSTEM_MESSAGE)
 
 if (!process.env.OPENAI_API_KEY) {
     console.log('[OpenAI] OPENAI_API_KEY invalid, this service will not work')

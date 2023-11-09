@@ -8,9 +8,8 @@ import KVStore from './libs/kv.js'
 import calc from './handlers/calc.js'
 import define from './handlers/define.js'
 import wordle from './handlers/wordle.js'
-import busyResponder from './handlers/busyResponder.js'
+import aiResponder from './handlers/aiResponder.js'
 import count from './handlers/count.js'
-import callme from './handlers/callme.js'
 import runCommand from './handlers/run.js'
 import cache from './handlers/cache.js'
 import summarize from './handlers/summarize.js'
@@ -22,12 +21,11 @@ async function run() {
     Router.registerCommandHandler(['define'], define)
     Router.registerCommandHandler(['calc', 'resetcalc'], calc)
     Router.registerCommandHandler(['newwordle', 'g', 'reveal', 'tries'], wordle)
-    Router.registerCommandHandler(['callme'], callme)
     Router.registerCommandHandler(['run'], runCommand)
     Router.registerCommandHandler(['summarize'], summarize)
     Router.registerCommandHandler(['what'], what)
+    Router.registerCommandHandler(['ai'], aiResponder)
     Router.registerCommandHandler(['*', 'translate_me', 'set_language'], translate)
-    Router.registerCommandHandler(['*'], busyResponder)
     Router.registerCommandHandler(['*'], count)
     Router.registerCommandHandler(['*'], cache)
     Router.registerKVStore(kvStore)
@@ -64,8 +62,7 @@ async function run() {
         '--disable-setuid-sandbox',
         '--no-zygote',
         '--single-process',
-        '--disable-dev-shm-usage',
-        ...(process.env.ALL_PROXY ? [`--proxy-server=${process.env.ALL_PROXY}`] : [])
+        '--disable-dev-shm-usage'
     ] : []
 
     const browser = await launch({
@@ -108,7 +105,7 @@ async function run() {
             })
         })
 
-        await page.goto('https://messenger.com')
+        await page.goto('https://facebook.com/messages')
 
         const cdp = await page.target().createCDPSession()
         await cdp.send('Network.enable')
@@ -145,17 +142,16 @@ async function run() {
     async function initializeCookies(): Promise<string> {
         try {
             const fbJson = Buffer.from(process.env.COOKIES ?? '', 'base64').toString('utf-8')
-            const messengerJson = Buffer.from(process.env.MESSENGER_COOKIES ?? '', 'base64').toString('utf-8')
             const fbCookies = JSON.parse(fbJson)
-            const messengerCookies = JSON.parse(messengerJson)
             //@ts-ignore
             const uid = fbCookies.filter(o => o.name == 'c_user')[0].value
             if (typeof uid !== 'string') throw new Error('Assertion: myUid was not string')
-            await page.setCookie(...fbCookies.concat(messengerCookies))
+            await page.setCookie(...fbCookies)
 
             return uid
-        } catch (_) {
+        } catch (e) {
             console.error('Failed to parse cookies')
+            console.error(e)
         }
 
         return ''
