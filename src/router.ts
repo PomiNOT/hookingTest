@@ -263,15 +263,24 @@ export default class Router {
         const answerWithSpecialChar = '\u200E' + answerText
 
         await page.bringToFront()
-        await page.evaluate((text) => {
-          navigator.clipboard.writeText(text)
-        }, answerWithSpecialChar)
-        await page.waitForSelector('div[data-lexical-editor="true"][aria-label="Message"]')
-        await page.focus('div[data-lexical-editor="true"][aria-label="Message"]')
-        await page.keyboard.down('ControlLeft')
-        await page.keyboard.press('v')
-        await page.keyboard.up('ControlLeft')
-        await page.keyboard.press('Enter')
+        const inputDiv = await page.$('div[data-lexical-editor="true"][aria-label="Message"]')
+
+        if (inputDiv) {
+          await inputDiv.focus()
+
+          const splitNewLines = answerWithSpecialChar.split(/\n+/)
+          for (const [i, line] of splitNewLines.entries()) {
+              await inputDiv.type(line, { delay: 50 })
+
+              if (i < splitNewLines.length - 1) {
+                await page.keyboard.down('ShiftLeft')
+                await page.keyboard.press('Enter')
+                await page.keyboard.up('ShiftLeft')
+              }
+          }
+
+          await page.keyboard.down('Enter')
+        }
 
         if (typeof response === 'object' && response.filePaths) {
             for (const file of response.filePaths) {
