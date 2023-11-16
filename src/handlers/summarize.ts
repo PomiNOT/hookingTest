@@ -3,7 +3,7 @@ import { Message } from './cache.js'
 import { db } from '../libs/firebase.js'
 import { DateTime } from 'luxon'
 import { Timestamp } from 'firebase-admin/firestore'
-import OpenAI from 'openai'
+import OpenAI, { fileFromPath } from 'openai'
 import Chat from '../libs/openai.js'
 
 type ChatRequest = OpenAI.ChatCompletionMessageParam;
@@ -36,34 +36,35 @@ function numberToLetter(num: number): string {
 
 export default async function summarize({ msgData }: HandlerRequest): Promise<HandlerResponse> {
     const roomRef = db.collection('rooms').doc(msgData.uid).collection('messages')
-    const room = await roomRef.limitToLast(20).orderBy('timestamp', 'asc').get()
+    const roomMessages = await roomRef.limitToLast(20).orderBy('timestamp', 'asc').get()
 
-    if (!room.empty) {
-        const messages: Message[] = room.docs.map(snap => snap.data() as Message)
+    if (!roomMessages.empty) {
+        const messages: Message[] = roomMessages.docs.map(snap => snap.data() as Message)
         const namesAssoc: { [key: string]: string } = {}
+
         let count = 0
         
-        const filtedMessages = messages.filter(({ message }) => !!message)
+        const filteredMessages = messages.filter(({ message }) => !!message)
 
-        for (const { sender } of filtedMessages) {
+        for (const { sender } of filteredMessages) {
             if (!namesAssoc[sender]) {
                 namesAssoc[sender] = numberToLetter(count)
                 count++
             }
         }
 
-        const textMessages = filtedMessages.map(({ message, timestamp, sender }) => {
+        const textMessages = filteredMessages.map(({ message, timestamp, sender }) => {
             const date = DateTime
                             .fromMillis((timestamp as Timestamp).toMillis())
                             .setZone('Asia/Ho_Chi_Minh')
             return `At ${date.toFormat('DD HH:mm:ss')} ${namesAssoc[sender]} said: ${message}`
         })
 
-
         if (textMessages.length < 1) return null
 
         const prompt = `Write a detailed summary for this chat:\n${textMessages.join('\n')}`
         console.log(prompt)
+
         const answer = await api.getChatResponse(prompt, msgData.uid)
         return answer
     }

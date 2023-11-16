@@ -6,6 +6,7 @@ export default async function what({ msgData }: HandlerRequest): Promise<Handler
     const { uid } = msgData
 
     const pin = passwords.randomPassword({ length: 6, characters: '0123456789' })
+
     const doc = await db.collection('/grants').add({
         attempts: 0,
         pin,

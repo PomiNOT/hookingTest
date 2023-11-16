@@ -66,6 +66,7 @@ export default class Game extends (EventEmitter as new () => TypedEmitter<Messag
 
     public check(word: string): CheckResult {
         if (!this.wordsInstance.loaded) return { ended: this.ended, message: '[Game] Words are still loading, please try again later!' }
+
         if (this.ended) return { ended: this.ended, message: '[Game] This game has ended' }
 
         if (this.wordsInstance.exists(word)) {

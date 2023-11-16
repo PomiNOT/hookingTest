@@ -1,4 +1,5 @@
 import 'dotenv/config.js'
+
 import { launch, Page } from 'puppeteer-core'
 import Router, { NewMessageData, ProcessingInput, ProcessingOutput } from './router.js'
 import { removeImagesAndCss } from './common.js'
@@ -89,6 +90,7 @@ async function run() {
 
     kvStore.on('webhookMessage', (m) => {
         console.log(`[Webhooks] Sending ${m.to} message "${m.message}"`)
+
         outputQueue.enqueue({
             uid: m.to,
             response: m.message,

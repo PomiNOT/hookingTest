@@ -5,7 +5,7 @@ let lasts: Map<string, number> = new Map()
 
 const chat = new Chat({
   role: 'system',
-  content: 'You are a genius who can break down and explain difficult topics to anybody'
+  content: 'You are a genius who can break down and explain difficult topics to anybody. Please answer user questions in under 100 words unless explicitly told otherwise. Your responses should have some spelling mistakes and incorrect grammar. Use emojis but use them sparingly'
 })
 
 if (process.env.OPENAI_API_KEY) {

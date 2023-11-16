@@ -77,7 +77,7 @@ export default class Router {
     private static kvStore: KVStore | null = null
     private static pages: Map<string, { lastUsed: number, page: Page }> = new Map()
     private static _maxPages: number = 2
-    private static unusedTimeout: number = 30
+    private static unusedTimeout: number = 90
     private static garbageCollector: NodeJS.Timer
 
     static {
@@ -259,9 +259,18 @@ export default class Router {
             lastUsed: Date.now()
         })
         
+        const answerText = typeof response === 'string' ? response : response.answer
+        const answerWithSpecialChar = '\u200E' + answerText
+
         await page.bringToFront()
+        await page.evaluate((text) => {
+          navigator.clipboard.writeText(text)
+        }, answerWithSpecialChar)
         await page.waitForSelector('div[data-lexical-editor="true"][aria-label="Message"]')
-        await page.type('div[data-lexical-editor="true"][aria-label="Message"]', '\u200E' + response)
+        await page.focus('div[data-lexical-editor="true"][aria-label="Message"]')
+        await page.keyboard.down('ControlLeft')
+        await page.keyboard.press('v')
+        await page.keyboard.up('ControlLeft')
         await page.keyboard.press('Enter')
 
         if (typeof response === 'object' && response.filePaths) {

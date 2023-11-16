@@ -19,8 +19,13 @@ export default async function run({ body }: HandlerRequest): Promise<HandlerResp
       })
 
       if (response.ok) {
-        const output = await response.json()
-        return output.stdout ? output.stdout : output.stderr
+        const output = await response.json() as {
+          stdout: string | undefined,
+          stderr: string | undefined
+        }
+
+        const trimmed = output.stdout?.slice(0, 512);
+        return trimmed ? trimmed : (output.stderr ?? 'Error')
       }
     } else {
       console.log('[RUN] GLOT_API_KEY is required to run code')
